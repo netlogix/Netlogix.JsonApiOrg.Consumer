@@ -1,0 +1,9 @@
+Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackend:
+  properties:
+    requestsCache:
+      object:
+        factoryObjectName: TYPO3\Flow\Cache\CacheManager
+        factoryMethodName: getCache
+        arguments:
+          1:
+            value: NetlogixJsonApiOrgConsumer_RequestsCache

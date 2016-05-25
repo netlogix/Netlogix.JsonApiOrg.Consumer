@@ -1,0 +1,7 @@
+Netlogix:
+  JsonApiOrg:
+    Consumer:
+
+      headers:
+        "%^http(s?)://%i":
+          "User-Agent": "Netlogix.JsonApiOrg.Consumer"
