@@ -116,6 +116,7 @@ class ConsumerBackend implements ConsumerBackendInterface
         foreach ($filter as $key => $value) {
             $arguments['filter'][$key] = $value;
         }
+        $include = array_merge($type->getDefaultIncludes(), $include);
         $arguments['include'] = join(',', $include);
         if (!$arguments['include']) {
             unset($arguments['include']);
@@ -172,15 +173,7 @@ class ConsumerBackend implements ConsumerBackendInterface
     {
         $uriString = (string)$uri;
 
-        $headers = [];
-        foreach ($this->headers as $uriPattern => $headersForUriPattern) {
-            if (!preg_match($uriPattern, $uriString)) {
-                continue;
-            }
-            foreach ($headersForUriPattern as $key => $value) {
-                $headers[$key] = $value;
-            }
-        }
+        $headers = $this->getRequestHeaders($uriString);
 
         $options = [
             'http' => [
@@ -241,6 +234,25 @@ class ConsumerBackend implements ConsumerBackendInterface
         if (array_key_exists($cacheIdentifier, $this->resources)) {
             return $this->resources[$cacheIdentifier];
         }
+    }
+
+    /**
+     * @param string $uriString
+     * @return array
+     */
+    protected function getRequestHeaders(string $uriString): array
+    {
+        $headers = [];
+        foreach ($this->headers as $uriPattern => $headersForUriPattern) {
+            if (!preg_match($uriPattern, $uriString)) {
+                continue;
+            }
+            foreach ($headersForUriPattern as $key => $value) {
+                $headers[$key] = $value;
+            }
+        }
+
+        return $headers;
     }
 
     /**
