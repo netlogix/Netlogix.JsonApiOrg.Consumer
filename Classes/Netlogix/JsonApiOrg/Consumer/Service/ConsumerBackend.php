@@ -116,7 +116,7 @@ class ConsumerBackend implements ConsumerBackendInterface
         foreach ($filter as $key => $value) {
             $arguments['filter'][$key] = $value;
         }
-        $include = array_merge($type->getDefaultIncludes(), $include);
+        $include = array_unique(array_merge($type->getDefaultIncludes(), $include));
         $arguments['include'] = join(',', $include);
         if (!$arguments['include']) {
             unset($arguments['include']);
