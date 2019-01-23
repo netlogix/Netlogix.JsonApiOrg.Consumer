@@ -60,12 +60,18 @@ class Type
     protected $uri = '';
 
     /**
+     * @var array
+     */
+    protected $defaultIncludes = [];
+
+    /**
      * @param string $typeName
      * @param string $resourceClassName
      * @param array $properties
      * @param Uri $uri
+     * @param array $defaultIncludes
      */
-    public function __construct($typeName, $resourceClassName = ResourceProxy::class, array $properties = [], Uri $uri = null)
+    public function __construct($typeName, $resourceClassName = ResourceProxy::class, array $properties = [], Uri $uri = null, array $defaultIncludes = [])
     {
         $this->typeName = (string)$typeName;
         $this->resourceClassName = (string)$resourceClassName;
@@ -73,6 +79,7 @@ class Type
         if ($uri) {
             $this->setUri($uri);
         }
+        $this->defaultIncludes = $defaultIncludes;
     }
 
     /**
@@ -105,6 +112,14 @@ class Type
     public function getResourceClassName()
     {
         return $this->resourceClassName;
+    }
+
+    /**
+     * @return array
+     */
+    public function getDefaultIncludes()
+    {
+        return $this->defaultIncludes;
     }
 
     /**
