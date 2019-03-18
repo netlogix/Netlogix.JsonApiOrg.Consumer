@@ -9,7 +9,9 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  * source code.
  */
 
+use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
+use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
 use TYPO3\Flow\Annotations as Flow;
 use TYPO3\Flow\Cache\Frontend\StringFrontend;
@@ -70,6 +72,8 @@ class ConsumerBackend implements ConsumerBackendInterface
         if (array_key_exists($typeName, $this->types)) {
             return $this->types[$typeName];
         }
+
+        return null;
     }
 
     /**
@@ -105,9 +109,10 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param string $type
      * @param array $filter
      * @param array $include
-     * @return array<ResourceProxy>
+     * @param PageInterface $page
+     * @return ResourceProxyIterator
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [])
+    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null)
     {
         $type = $this->getType($type);
         $queryUri = clone $type->getUri();
@@ -121,6 +126,9 @@ class ConsumerBackend implements ConsumerBackendInterface
         if (!$arguments['include']) {
             unset($arguments['include']);
         }
+        if ($page !== null) {
+            $arguments['page'] = $page->__toArray();
+        }
         $queryUri->setQuery(http_build_query($arguments));
 
         return $this->fetchFromUri($queryUri);
@@ -128,19 +136,21 @@ class ConsumerBackend implements ConsumerBackendInterface
 
     /**
      * @param Uri $queryUri
-     * @return array<ResourceProxy>|ResourceProxy
+     * @return ResourceProxyIterator
      */
     public function fetchFromUri(Uri $queryUri)
     {
         $jsonResult = $this->requestJson($queryUri);
         $this->addJsonResultToCache($jsonResult);
         if (!array_key_exists('data', $jsonResult)) {
-            return [];
+            return new ResourceProxyIterator([]);
         }
 
         if (array_key_exists('type', $jsonResult['data']) && array_key_exists('id', $jsonResult['data'])) {
-            return $this->getResourceProxyFromCache($jsonResult['data']['type'], $jsonResult['data']['id']);
-
+            return new ResourceProxyIterator(
+                [$this->getResourceProxyFromCache($jsonResult['data']['type'], $jsonResult['data']['id'])],
+                $jsonResult
+            );
         } else {
             $result = [];
             if (array_key_exists('data', $jsonResult)) {
@@ -151,7 +161,8 @@ class ConsumerBackend implements ConsumerBackendInterface
                     }
                 }
             }
-            return $result;
+
+            return new ResourceProxyIterator($result, $jsonResult);
         }
     }
 
@@ -168,32 +179,47 @@ class ConsumerBackend implements ConsumerBackendInterface
     /**
      * @param Uri $uri
      * @return array
+     * @throws \TYPO3\Flow\Cache\Exception\InvalidDataException
      */
     protected function requestJson(Uri $uri)
     {
         $uriString = (string)$uri;
 
         $headers = $this->getRequestHeaders($uriString);
-
-        $options = [
-            'http' => [
-                'header' => [],
-            ]
-        ];
+        $headersForCacheIdentifier = [];
         foreach ($headers as $key => $value) {
-            $options['http']['header'][] = sprintf('%s: %s', $key, $value);
+            $headersForCacheIdentifier[] = sprintf('%s: %s', $key, $value);
         }
-        $options['http']['header'] = join("\r\n", $options['http']['header']);
-
-        $cacheIdentifier = md5(serialize($options) . '|' . $uriString);
+        $cacheIdentifier = md5(serialize($headersForCacheIdentifier) . '|' . $uriString);
 
         if ($this->requestsCache->has($cacheIdentifier)) {
             $result = $this->requestsCache->get($cacheIdentifier);
         } else {
-            $result = file_get_contents($uriString, null, $context = stream_context_create($options));
+            $result = $this->fetch($uri, $headers);
             $this->requestsCache->set($cacheIdentifier, $result);
         }
+
         return json_decode($result, true);
+    }
+
+    /**
+     * @param Uri $uri
+     * @param array $headers
+     * @return false|string
+     */
+    protected function fetch(Uri $uri, $headers = [])
+    {
+        $combinedHeaders = [];
+        foreach ($headers as $key => $value) {
+            $combinedHeaders[] = sprintf('%s: %s', $key, $value);
+        }
+        $options = [
+            'http' => [
+                'header' => join("\r\n", $combinedHeaders),
+            ]
+        ];
+
+        return file_get_contents((string) $uri, null, $context = stream_context_create($options));
     }
 
     /**
@@ -234,6 +260,8 @@ class ConsumerBackend implements ConsumerBackendInterface
         if (array_key_exists($cacheIdentifier, $this->resources)) {
             return $this->resources[$cacheIdentifier];
         }
+
+        return null;
     }
 
     /**
