@@ -9,6 +9,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  * source code.
  */
 
+use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
 use TYPO3\Flow\Annotations as Flow;
@@ -70,6 +71,8 @@ class ConsumerBackend implements ConsumerBackendInterface
         if (array_key_exists($typeName, $this->types)) {
             return $this->types[$typeName];
         }
+
+        return null;
     }
 
     /**
@@ -105,9 +108,10 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param string $type
      * @param array $filter
      * @param array $include
+     * @param PageInterface $page
      * @return array<ResourceProxy>
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [])
+    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null)
     {
         $type = $this->getType($type);
         $queryUri = clone $type->getUri();
@@ -120,6 +124,9 @@ class ConsumerBackend implements ConsumerBackendInterface
         $arguments['include'] = join(',', $include);
         if (!$arguments['include']) {
             unset($arguments['include']);
+        }
+        if ($page !== null) {
+            $arguments['page'] = $page->__toArray();
         }
         $queryUri->setQuery(http_build_query($arguments));
 
@@ -140,7 +147,6 @@ class ConsumerBackend implements ConsumerBackendInterface
 
         if (array_key_exists('type', $jsonResult['data']) && array_key_exists('id', $jsonResult['data'])) {
             return $this->getResourceProxyFromCache($jsonResult['data']['type'], $jsonResult['data']['id']);
-
         } else {
             $result = [];
             if (array_key_exists('data', $jsonResult)) {
