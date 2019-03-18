@@ -6,7 +6,8 @@
     "MIT"
   ],
   "require": {
-    "typo3/flow": "*"
+    "typo3/flow": "*",
+    "ext-json": "*"
   },
   "suggest": {
   },

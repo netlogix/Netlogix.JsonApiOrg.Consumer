@@ -11,6 +11,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
 
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
+use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
 use TYPO3\Flow\Annotations as Flow;
 use TYPO3\Flow\Http\Uri;
@@ -38,7 +39,7 @@ interface ConsumerBackendInterface
      * @param array $filter
      * @param array $include
      * @param PageInterface $page
-     * @return array<ResourceProxy>
+     * @return ResourceProxyIterator
      */
     public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null);
 
