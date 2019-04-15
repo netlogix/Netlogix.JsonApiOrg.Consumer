@@ -10,6 +10,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  */
 
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
+use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
@@ -39,9 +40,10 @@ interface ConsumerBackendInterface
      * @param array $filter
      * @param array $include
      * @param PageInterface $page
+     * @param SortInterface $sort
      * @return ResourceProxyIterator
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null);
+    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null);
 
     /**
      * @param Uri $queryUri
