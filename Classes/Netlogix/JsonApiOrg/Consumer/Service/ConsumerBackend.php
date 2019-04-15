@@ -10,6 +10,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  */
 
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
+use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
@@ -110,9 +111,10 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param array $filter
      * @param array $include
      * @param PageInterface $page
+     * @param SortInterface $sort
      * @return ResourceProxyIterator
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null)
+    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null)
     {
         $type = $this->getType($type);
         $queryUri = clone $type->getUri();
@@ -128,6 +130,9 @@ class ConsumerBackend implements ConsumerBackendInterface
         }
         if ($page !== null) {
             $arguments['page'] = $page->__toArray();
+        }
+        if ($sort !== null) {
+            $arguments['sort'] = $sort->__toString();
         }
         $queryUri->setQuery(http_build_query($arguments));
 
