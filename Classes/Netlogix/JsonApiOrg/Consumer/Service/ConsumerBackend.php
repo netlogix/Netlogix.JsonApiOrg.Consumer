@@ -17,6 +17,7 @@ use Neos\Flow\Http\Uri;
 use Neos\Flow\ObjectManagement\Exception\UnresolvedDependenciesException;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
+use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
@@ -113,11 +114,12 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param string $type
      * @param array $filter
      * @param array $include
-     * @param PageInterface|null $page
+     * @param PageInterface $page
+     * @param SortInterface $sort
      * @return ResourceProxyIterator
      * @throws UnresolvedDependenciesException
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null)
+    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null)
     {
         $type = $this->getType($type);
         $queryUri = clone $type->getUri();
@@ -133,6 +135,9 @@ class ConsumerBackend implements ConsumerBackendInterface
         }
         if ($page !== null) {
             $arguments['page'] = $page->__toArray();
+        }
+        if ($sort !== null) {
+            $arguments['sort'] = $sort->__toString();
         }
         $queryUri->setQuery(http_build_query($arguments));
 
