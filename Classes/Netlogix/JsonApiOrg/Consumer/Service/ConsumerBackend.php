@@ -1,4 +1,5 @@
 <?php
+
 namespace Netlogix\JsonApiOrg\Consumer\Service;
 
 /*
@@ -9,14 +10,16 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  * source code.
  */
 
+use Neos\Cache\Exception\InvalidDataException;
+use Neos\Cache\Frontend\StringFrontend;
+use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Http\Uri;
+use Neos\Flow\ObjectManagement\Exception\UnresolvedDependenciesException;
+use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
-use TYPO3\Flow\Annotations as Flow;
-use TYPO3\Flow\Cache\Frontend\StringFrontend;
-use TYPO3\Flow\Http\Uri;
-use TYPO3\Flow\Object\ObjectManagerInterface;
 
 /**
  * @Flow\Scope("singleton")
@@ -78,6 +81,7 @@ class ConsumerBackend implements ConsumerBackendInterface
 
     /**
      * @param Uri $endpointDiscovery
+     * @throws InvalidDataException
      */
     public function registerEndpointsByEndpointDiscovery(Uri $endpointDiscovery)
     {
@@ -109,8 +113,9 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param string $type
      * @param array $filter
      * @param array $include
-     * @param PageInterface $page
+     * @param PageInterface|null $page
      * @return ResourceProxyIterator
+     * @throws UnresolvedDependenciesException
      */
     public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null)
     {
@@ -137,6 +142,8 @@ class ConsumerBackend implements ConsumerBackendInterface
     /**
      * @param Uri $queryUri
      * @return ResourceProxyIterator
+     * @throws InvalidDataException
+     * @throws UnresolvedDependenciesException
      */
     public function fetchFromUri(Uri $queryUri)
     {
@@ -155,7 +162,8 @@ class ConsumerBackend implements ConsumerBackendInterface
             $result = [];
             if (array_key_exists('data', $jsonResult)) {
                 foreach ($jsonResult['data'] as $resourceDefinition) {
-                    $resource = $this->getResourceProxyFromCache($resourceDefinition['type'], $resourceDefinition['id']);
+                    $resource = $this->getResourceProxyFromCache($resourceDefinition['type'],
+                        $resourceDefinition['id']);
                     if ($resource) {
                         $result[] = $resource;
                     }
@@ -179,7 +187,7 @@ class ConsumerBackend implements ConsumerBackendInterface
     /**
      * @param Uri $uri
      * @return array
-     * @throws \TYPO3\Flow\Cache\Exception\InvalidDataException
+     * @throws InvalidDataException
      */
     protected function requestJson(Uri $uri)
     {
@@ -203,6 +211,25 @@ class ConsumerBackend implements ConsumerBackendInterface
     }
 
     /**
+     * @param string $uriString
+     * @return array
+     */
+    protected function getRequestHeaders(string $uriString): array
+    {
+        $headers = [];
+        foreach ($this->headers as $uriPattern => $headersForUriPattern) {
+            if (!preg_match($uriPattern, $uriString)) {
+                continue;
+            }
+            foreach ($headersForUriPattern as $key => $value) {
+                $headers[$key] = $value;
+            }
+        }
+
+        return $headers;
+    }
+
+    /**
      * @param Uri $uri
      * @param array $headers
      * @return false|string
@@ -219,7 +246,7 @@ class ConsumerBackend implements ConsumerBackendInterface
             ]
         ];
 
-        return file_get_contents((string) $uri, null, $context = stream_context_create($options));
+        return file_get_contents((string)$uri, null, $context = stream_context_create($options));
     }
 
     /**
@@ -262,25 +289,6 @@ class ConsumerBackend implements ConsumerBackendInterface
         }
 
         return null;
-    }
-
-    /**
-     * @param string $uriString
-     * @return array
-     */
-    protected function getRequestHeaders(string $uriString): array
-    {
-        $headers = [];
-        foreach ($this->headers as $uriPattern => $headersForUriPattern) {
-            if (!preg_match($uriPattern, $uriString)) {
-                continue;
-            }
-            foreach ($headersForUriPattern as $key => $value) {
-                $headers[$key] = $value;
-            }
-        }
-
-        return $headers;
     }
 
     /**

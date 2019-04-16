@@ -1,4 +1,5 @@
 <?php
+
 namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
 
 /*
@@ -9,8 +10,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
  * source code.
  */
 
-use TYPO3\Flow\Annotations as Flow;
-use TYPO3\Flow\Http\Uri;
+use Neos\Flow\Http\Uri;
 
 class Type
 {
@@ -71,8 +71,13 @@ class Type
      * @param Uri $uri
      * @param array $defaultIncludes
      */
-    public function __construct($typeName, $resourceClassName = ResourceProxy::class, array $properties = [], Uri $uri = null, array $defaultIncludes = [])
-    {
+    public function __construct(
+        $typeName,
+        $resourceClassName = ResourceProxy::class,
+        array $properties = [],
+        Uri $uri = null,
+        array $defaultIncludes = []
+    ) {
         $this->typeName = (string)$typeName;
         $this->resourceClassName = (string)$resourceClassName;
         $this->properties = $properties;
@@ -85,17 +90,17 @@ class Type
     /**
      * @return Uri
      */
-    public function setUri(Uri $uri)
+    public function getUri()
     {
-        $this->uri = $uri;
+        return $this->uri;
     }
 
     /**
      * @return Uri
      */
-    public function getUri()
+    public function setUri(Uri $uri)
     {
-        return $this->uri;
+        $this->uri = $uri;
     }
 
     /**
