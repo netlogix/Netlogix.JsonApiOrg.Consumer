@@ -1,4 +1,5 @@
 <?php
+
 namespace Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments;
 
 /*

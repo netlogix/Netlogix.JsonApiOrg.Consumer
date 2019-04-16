@@ -1,19 +1,20 @@
 {
-  "name": "netlogix/jsonapiorg-consumer",
-  "type": "typo3-flow-package",
-  "homepage": "http://www.netlogix.de",
-  "license": [
-    "MIT"
-  ],
-  "require": {
-    "typo3/flow": "*",
-    "ext-json": "*"
-  },
-  "suggest": {
-  },
-  "autoload": {
-    "psr-0": {
-      "Netlogix\\JsonApiOrg\\Consumer": "Classes"
+    "name": "netlogix/jsonapiorg-consumer",
+    "type": "neos-package",
+    "description": "PHP consumer package for jsonapi.org data",
+    "homepage": "http://www.netlogix.de",
+    "license": [
+        "MIT"
+    ],
+    "require": {
+        "neos/flow": "~5.1",
+        "ext-json": "*"
+    },
+    "suggest": {
+    },
+    "autoload": {
+        "psr-0": {
+            "Netlogix\\JsonApiOrg\\Consumer": "Classes"
+        }
     }
-  }
 }

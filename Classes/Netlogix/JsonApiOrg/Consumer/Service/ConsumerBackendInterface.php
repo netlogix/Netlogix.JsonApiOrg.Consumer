@@ -1,4 +1,5 @@
 <?php
+
 namespace Netlogix\JsonApiOrg\Consumer\Service;
 
 /*
@@ -9,13 +10,12 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  * source code.
  */
 
+use Neos\Flow\Http\Uri;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
-use TYPO3\Flow\Annotations as Flow;
-use TYPO3\Flow\Http\Uri;
 
 interface ConsumerBackendInterface
 {
@@ -47,7 +47,7 @@ interface ConsumerBackendInterface
 
     /**
      * @param Uri $queryUri
-     * @return array<ResourceProxy>|ResourceProxy
+     * @return ResourceProxyIterator
      */
     public function fetchFromUri(Uri $queryUri);
 

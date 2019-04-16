@@ -47,5 +47,9 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
         return count($this->data);
     }
 
+    public function getLinks()
+    {
+        return $this->jsonResult['links'] ?? [];
+    }
 
 }

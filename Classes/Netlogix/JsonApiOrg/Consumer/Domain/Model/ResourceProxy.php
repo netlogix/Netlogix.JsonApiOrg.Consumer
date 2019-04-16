@@ -1,4 +1,5 @@
 <?php
+
 namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
 
 /*
@@ -9,10 +10,9 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
  * source code.
  */
 
+use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Http\Uri;
 use Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackendInterface;
-use TYPO3\Flow\Annotations as Flow;
-use TYPO3\Flow\Http\Uri;
-use TYPO3\Flow\Reflection\ObjectAccess;
 
 class ResourceProxy implements \ArrayAccess
 {
@@ -60,19 +60,11 @@ class ResourceProxy implements \ArrayAccess
     {
         switch ($this->type->getPropertyDefinition($propertyName)) {
             case Type::PROPERTY_ATTRIBUTE:
-                return $this->payload['attributes'][$propertyName];
-                break;
+                return $this->getAttribute($propertyName);
             case Type::PROPERTY_SINGLE_RELATIONSHIP:
-                $this->loadRelationship($propertyName);
-                $payload = $this->payload['relationships'][$propertyName]['data'];
-                return $payload ? $this->consumerBackend->fetchByTypeAndId($payload['type'], $payload['id']) : null;
+                return $this->getSingleRelationship($propertyName);
             case Type::PROPERTY_COLLECTION_RELATIONSHIP:
-                $this->loadRelationship($propertyName);
-                $result = [];
-                foreach ($this->payload['relationships'][$propertyName]['data'] as $payload) {
-                    $result[] = $this->consumerBackend->fetchByTypeAndId($payload['type'], $payload['id']);
-                }
-                return $result;
+                return $this->getCollectionRelationship($propertyName);
         }
     }
 
@@ -98,26 +90,7 @@ class ResourceProxy implements \ArrayAccess
         return array_intersect_key($this->payload, ['type' => 'type', 'id' => 'id']);
     }
 
-    /**
-     * @param array<string> $nameComponents
-     * @return array
-     */
-    protected function getNotEmptyOffsetComponents(array $nameComponents = [])
-    {
-        $result = [];
-        foreach ($nameComponents as $nameComponent) {
-            $value = ObjectAccess::getProperty($this, $nameComponent);
-            if ($value) {
-                $result[] = $value;
-            }
-        }
-        return $result;
-    }
-
-    /**
-     * @param string $propertyName
-     */
-    protected function loadRelationship($propertyName)
+    protected function loadRelationship(string $propertyName)
     {
         if (array_key_exists('data', $this->payload['relationships'][$propertyName])) {
             return;
@@ -128,14 +101,44 @@ class ResourceProxy implements \ArrayAccess
 
         if ($this->type->getPropertyDefinition($propertyName) === Type::PROPERTY_COLLECTION_RELATIONSHIP) {
             $this->payload['relationships'][$propertyName]['data'] = [];
-            /** @var ResourceProxy $resource */
             foreach ($queryResult as $resource) {
+                assert($resource instanceof ResourceProxy);
                 $this->payload['relationships'][$propertyName]['data'][] = $resource->getJsonApiOrgResourceIdentifier();
             }
         } elseif ($this->type->getPropertyDefinition($propertyName) === Type::PROPERTY_COLLECTION_RELATIONSHIP) {
-            /** @var ResourceProxy $queryResult */
-            $this->payload['relationships'][$propertyName]['data']= $queryResult->getJsonApiOrgResourceIdentifier();
+            assert($queryResult instanceof ResourceProxy);
+            $this->payload['relationships'][$propertyName]['data'] = $queryResult->getJsonApiOrgResourceIdentifier();
         }
     }
 
+    protected function getAttribute(string $propertyName)
+    {
+        if ($this->type->getPropertyDefinition($propertyName) !== Type::PROPERTY_ATTRIBUTE) {
+            throw new \InvalidArgumentException(sprintf('There is no attribute called %s', $propertyName));
+        }
+        return $this->payload['attributes'][$propertyName];
+    }
+
+    protected function getSingleRelationship(string $propertyName)
+    {
+        if ($this->type->getPropertyDefinition($propertyName) !== Type::PROPERTY_SINGLE_RELATIONSHIP) {
+            throw new \InvalidArgumentException(sprintf('There is no relationship called %s', $propertyName));
+        }
+        $this->loadRelationship($propertyName);
+        $payload = $this->payload['relationships'][$propertyName]['data'];
+        return $payload ? $this->consumerBackend->fetchByTypeAndId($payload['type'], $payload['id']) : null;
+    }
+
+    protected function getCollectionRelationship(string $propertyName)
+    {
+        if ($this->type->getPropertyDefinition($propertyName) !== Type::PROPERTY_COLLECTION_RELATIONSHIP) {
+            throw new \InvalidArgumentException(sprintf('There is no relationship called %s', $propertyName));
+        }
+        $this->loadRelationship($propertyName);
+        $result = [];
+        foreach ($this->payload['relationships'][$propertyName]['data'] as $payload) {
+            $result[] = $this->consumerBackend->fetchByTypeAndId($payload['type'], $payload['id']);
+        }
+        return $result;
+    }
 }
