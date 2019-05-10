@@ -154,7 +154,7 @@ class ConsumerBackend implements ConsumerBackendInterface
     {
         $jsonResult = $this->requestJson($queryUri);
         $this->addJsonResultToCache($jsonResult);
-        if (!array_key_exists('data', $jsonResult)) {
+        if (!array_key_exists('data', $jsonResult) || !$jsonResult['data']) {
             return new ResourceProxyIterator([]);
         }
 
@@ -260,7 +260,7 @@ class ConsumerBackend implements ConsumerBackendInterface
     protected function addJsonResultToCache(array $result)
     {
         foreach (['data', 'included'] as $slotName) {
-            if (!array_key_exists($slotName, $result)) {
+            if (!array_key_exists($slotName, $result) || !$result[$slotName]) {
                 continue;
             }
             foreach ($result[$slotName] as $resourceDefinition) {
