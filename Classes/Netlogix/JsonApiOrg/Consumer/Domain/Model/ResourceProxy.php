@@ -18,7 +18,6 @@ class ResourceProxy implements \ArrayAccess
 {
     /**
      * @var ConsumerBackendInterface
-     * @Flow\Inject
      */
     protected $consumerBackend;
 
@@ -32,9 +31,10 @@ class ResourceProxy implements \ArrayAccess
      */
     protected $payload = [];
 
-    public function __construct(Type $type)
+    public function __construct(Type $type, ConsumerBackendInterface $consumerBackend)
     {
         $this->type = $type;
+        $this->consumerBackend = $consumerBackend;
     }
 
     /**
