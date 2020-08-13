@@ -10,7 +10,9 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
  * source code.
  */
 
+use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Http\Uri;
+use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 
 class Type
 {
@@ -65,6 +67,12 @@ class Type
     protected $defaultIncludes = [];
 
     /**
+     * @var ObjectManagerInterface
+     * @Flow\Inject
+     */
+    protected $objectgManager;
+
+    /**
      * @param string $typeName
      * @param string $resourceClassName
      * @param array $properties
@@ -117,6 +125,14 @@ class Type
     public function getResourceClassName()
     {
         return $this->resourceClassName;
+    }
+
+    /**
+     * @return ResourceProxy
+     */
+    public function createEmptyResource(): ResourceProxy
+    {
+        return $this->objectgManager->get($this->resourceClassName, $this);
     }
 
     /**

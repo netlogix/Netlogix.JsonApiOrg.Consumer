@@ -15,7 +15,6 @@ use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Http\Uri;
 use Neos\Flow\ObjectManagement\Exception\UnresolvedDependenciesException;
-use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
@@ -27,12 +26,6 @@ use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
  */
 class ConsumerBackend implements ConsumerBackendInterface
 {
-    /**
-     * @var ObjectManagerInterface
-     * @Flow\Inject
-     */
-    protected $objectManager;
-
     /**
      * @var StringFrontend
      * @Flow\Inject
@@ -119,8 +112,13 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @return ResourceProxyIterator
      * @throws UnresolvedDependenciesException
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null)
-    {
+    public function findByTypeAndFilter(
+        $type,
+        $filter = [],
+        $include = [],
+        PageInterface $page = null,
+        SortInterface $sort = null
+    ) {
         $type = $this->getType($type);
         $queryUri = clone $type->getUri();
 
@@ -152,31 +150,19 @@ class ConsumerBackend implements ConsumerBackendInterface
      */
     public function fetchFromUri(Uri $queryUri)
     {
-        $jsonResult = $this->requestJson($queryUri);
-        $this->addJsonResultToCache($jsonResult);
-        if (!array_key_exists('data', $jsonResult) || !$jsonResult['data']) {
-            return new ResourceProxyIterator([]);
+        $resourceProxy = ResourceProxyIterator::fromUri($queryUri);
+        $resourceProxy = $resourceProxy->loadFromCache();
+
+        if (!$resourceProxy->hasResults()) {
+            $jsonResult = $this->requestJson($queryUri);
+            $resourceProxy = $resourceProxy->withJsonResult($jsonResult);
         }
 
-        if (array_key_exists('type', $jsonResult['data']) && array_key_exists('id', $jsonResult['data'])) {
-            return new ResourceProxyIterator(
-                [$this->getResourceProxyFromCache($jsonResult['data']['type'], $jsonResult['data']['id'])],
-                $jsonResult
-            );
-        } else {
-            $result = [];
-            if (array_key_exists('data', $jsonResult)) {
-                foreach ($jsonResult['data'] as $resourceDefinition) {
-                    $resource = $this->getResourceProxyFromCache($resourceDefinition['type'],
-                        $resourceDefinition['id']);
-                    if ($resource) {
-                        $result[] = $resource;
-                    }
-                }
-            }
-
-            return new ResourceProxyIterator($result, $jsonResult);
-        }
+        $convertResourceDefinitionToResourceProxy = function (array $resourceDefinition): ?ResourceProxy {
+            return $this->convertResourceDefinitionToResourceProxy($resourceDefinition);
+        };
+        $resourceProxy->initialize($convertResourceDefinitionToResourceProxy);
+        return $resourceProxy;
     }
 
     /**
@@ -254,31 +240,22 @@ class ConsumerBackend implements ConsumerBackendInterface
         return file_get_contents((string)$uri, null, $context = stream_context_create($options));
     }
 
-    /**
-     * @param array $result
-     */
-    protected function addJsonResultToCache(array $result)
+    protected function convertResourceDefinitionToResourceProxy(array $resourceDefinition): ?ResourceProxy
     {
-        foreach (['data', 'included'] as $slotName) {
-            if (!array_key_exists($slotName, $result) || !$result[$slotName]) {
-                continue;
+        $typeName = $resourceDefinition['type'];
+        $id = $resourceDefinition['id'];
+        $resource = $this->getResourceProxyFromCache($typeName, $id);
+        if (!$resource) {
+            $type = $this->getType($typeName);
+            if (!$type) {
+                return null;
             }
-            foreach ($result[$slotName] as $resourceDefinition) {
-                $typeName = $resourceDefinition['type'];
-                $id = $resourceDefinition['id'];
-                $resource = $this->getResourceProxyFromCache($typeName, $id);
-                if (!$resource) {
-                    $type = $this->getType($typeName);
-                    if (!$type) {
-                        continue;
-                    }
-                    $resource = $this->objectManager->get($type->getResourceClassName(), $type);
-                    $cacheIdentifier = $this->calculateCacheIdentifier($typeName, $id);
-                    $this->resources[$cacheIdentifier] = $resource;
-                }
-                $resource->setPayload($resourceDefinition);
-            }
+            $resource = $type->createEmptyResource();
+            $cacheIdentifier = $this->calculateCacheIdentifier($typeName, $id);
+            $this->resources[$cacheIdentifier] = $resource;
         }
+        $resource->setPayload($resourceDefinition);
+        return $resource;
     }
 
     /**
