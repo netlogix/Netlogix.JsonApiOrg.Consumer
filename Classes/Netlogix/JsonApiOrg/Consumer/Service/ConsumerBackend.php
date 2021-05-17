@@ -119,6 +119,33 @@ class ConsumerBackend implements ConsumerBackendInterface
         PageInterface $page = null,
         SortInterface $sort = null
     ) {
+        $queryUri = $this->getQueryUriForFindByTypeAndFilter(
+            $type,
+            $filter,
+            $include,
+            $page,
+            $sort
+        );
+        return $this->fetchFromUri($queryUri);
+    }
+
+    /**
+     * @param string $type
+     * @param array $filter
+     * @param array $include
+     * @param PageInterface $page
+     * @param SortInterface $sort
+     * @return ResourceProxyIterator
+     * @throws UnresolvedDependenciesException
+     */
+    public function getQueryUriForFindByTypeAndFilter(
+        $type,
+        $filter = [],
+        $include = [],
+        PageInterface $page = null,
+        SortInterface $sort = null
+    ): Uri {
+
         $type = $this->getType($type);
         $queryUri = clone $type->getUri();
 
@@ -138,8 +165,7 @@ class ConsumerBackend implements ConsumerBackendInterface
             $arguments['sort'] = $sort->__toString();
         }
         $queryUri->setQuery(http_build_query($arguments));
-
-        return $this->fetchFromUri($queryUri);
+        return $queryUri;
     }
 
     /**
