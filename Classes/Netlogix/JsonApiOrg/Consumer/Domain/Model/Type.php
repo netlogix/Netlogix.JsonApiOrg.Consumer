@@ -104,7 +104,8 @@ class Type
     }
 
     /**
-     * @return Uri
+     * @param Uri $uri
+     * @return void
      */
     public function setUri(Uri $uri)
     {

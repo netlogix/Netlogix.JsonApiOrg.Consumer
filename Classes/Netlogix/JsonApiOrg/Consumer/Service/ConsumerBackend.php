@@ -10,27 +10,24 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  * source code.
  */
 
+use GuzzleHttp\Client;
 use Neos\Cache\Exception\InvalidDataException;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Http\Helper\UriHelper;
 use Neos\Flow\Http\Uri;
-use Neos\Flow\ObjectManagement\Exception\UnresolvedDependenciesException;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
+use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
 
 /**
  * @Flow\Scope("singleton")
  */
 class ConsumerBackend implements ConsumerBackendInterface
 {
-    /**
-     * @var StringFrontend
-     * @Flow\Inject
-     */
-    protected $requestsCache;
 
     /**
      * @var array<string>
@@ -41,6 +38,18 @@ class ConsumerBackend implements ConsumerBackendInterface
             'User-Agent' => 'Netlogix.JsonApiOrg.Consumer'
         ]
     ];
+
+    /**
+     * @var StringFrontend
+     * @Flow\Inject
+     */
+    protected $requestsCache;
+
+    /**
+     * @var ClientProvider
+     * @Flow\Inject
+     */
+    protected $clientProvider;
 
     /**
      * @var array<Type>
@@ -76,6 +85,7 @@ class ConsumerBackend implements ConsumerBackendInterface
     /**
      * @param Uri $endpointDiscovery
      * @throws InvalidDataException
+     * @throws \Neos\Cache\Exception
      */
     public function registerEndpointsByEndpointDiscovery(Uri $endpointDiscovery)
     {
@@ -107,10 +117,11 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param string $type
      * @param array $filter
      * @param array $include
-     * @param PageInterface $page
-     * @param SortInterface $sort
+     * @param PageInterface|null $page
+     * @param SortInterface|null $sort
      * @return ResourceProxyIterator
-     * @throws UnresolvedDependenciesException
+     * @throws InvalidDataException
+     * @throws \Neos\Cache\Exception
      */
     public function findByTypeAndFilter(
         $type,
@@ -133,10 +144,9 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param string $type
      * @param array $filter
      * @param array $include
-     * @param PageInterface $page
-     * @param SortInterface $sort
-     * @return ResourceProxyIterator
-     * @throws UnresolvedDependenciesException
+     * @param PageInterface|null $page
+     * @param SortInterface|null $sort
+     * @return Uri
      */
     public function getQueryUriForFindByTypeAndFilter(
         $type,
@@ -145,11 +155,9 @@ class ConsumerBackend implements ConsumerBackendInterface
         PageInterface $page = null,
         SortInterface $sort = null
     ): Uri {
-
         $type = $this->getType($type);
-        $queryUri = clone $type->getUri();
 
-        $arguments = $queryUri->getArguments();
+        $arguments = UriHelper::parseQueryIntoArguments($type->getUri());
         foreach ($filter as $key => $value) {
             $arguments['filter'][$key] = $value;
         }
@@ -164,7 +172,10 @@ class ConsumerBackend implements ConsumerBackendInterface
         if ($sort !== null) {
             $arguments['sort'] = $sort->__toString();
         }
-        $queryUri->setQuery(http_build_query($arguments));
+
+        $queryUri = UriHelper::uriWithArguments($type->getUri(), $arguments);
+        assert($queryUri instanceof Uri);
+
         return $queryUri;
     }
 
@@ -172,7 +183,7 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param Uri $queryUri
      * @return ResourceProxyIterator
      * @throws InvalidDataException
-     * @throws UnresolvedDependenciesException
+     * @throws \Neos\Cache\Exception
      */
     public function fetchFromUri(Uri $queryUri)
     {
@@ -205,6 +216,7 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param Uri $uri
      * @return array
      * @throws InvalidDataException
+     * @throws \Neos\Cache\Exception
      */
     protected function requestJson(Uri $uri)
     {
@@ -248,22 +260,18 @@ class ConsumerBackend implements ConsumerBackendInterface
 
     /**
      * @param Uri $uri
-     * @param array $headers
-     * @return false|string
+     * @param array<string, string> $headers
+     * @return string
      */
-    protected function fetch(Uri $uri, $headers = [])
+    protected function fetch(Uri $uri, array $headers = [])
     {
-        $combinedHeaders = [];
-        foreach ($headers as $key => $value) {
-            $combinedHeaders[] = sprintf('%s: %s', $key, $value);
-        }
-        $options = [
-            'http' => [
-                'header' => join("\r\n", $combinedHeaders),
-            ]
-        ];
+        $client = $this->clientProvider->createClient();
 
-        return file_get_contents((string)$uri, null, $context = stream_context_create($options));
+        $response = $client->get($uri, [
+            'headers' => $headers
+        ]);
+
+        return $response->getBody()->getContents();
     }
 
     protected function convertResourceDefinitionToResourceProxy(array $resourceDefinition): ?ResourceProxy
@@ -307,5 +315,10 @@ class ConsumerBackend implements ConsumerBackendInterface
     protected function calculateCacheIdentifier($type, $id)
     {
         return $type . "\n" . $id;
+    }
+
+    protected function createClient(): Client
+    {
+        return $this->clientProvider->createClient();
     }
 }
