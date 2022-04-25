@@ -7,9 +7,13 @@ use GuzzleHttp\Client;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Promise\Create;
+use GuzzleHttp\Psr7\Message;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use Neos\Cache\Frontend\FrontendInterface;
 use Neos\Flow\Annotations as Flow;
+use Neos\Flow\Cache\CacheManager;
+use Neos\Flow\Core\Bootstrap;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -21,28 +25,32 @@ use Psr\Http\Message\UriInterface;
 final class TestingClientProvider implements ClientProvider
 {
 
-    /**
-     * FIXME: Use Flow Cache
-     *
-     * @var array<string, ResponseInterface>
-     */
-    private $responsesForUris = [];
+    private const CACHE_IDENTIFIER = 'NetlogixJsonApiOrgConsumer_HistoryMiddlewareCache';
 
     /**
      * @var array
      */
     private $history = [];
 
+    private FrontendInterface $cache;
+
     public function __construct()
     {
+        $cacheManager = Bootstrap::$staticObjectManager->get(CacheManager::class);
+        $this->cache = $cacheManager->getCache(self::CACHE_IDENTIFIER);
     }
 
     public function createClient(): Client
     {
         $requestHandler = function (RequestInterface $request) {
             $uri = (string)$request->getUri();
-            if (array_key_exists($uri, $this->responsesForUris)) {
-                return Create::promiseFor($this->responsesForUris[$uri]);
+            $cacheIdentifier = self::cacheIdentifier($request->getUri());
+
+            if ($this->cache->has($cacheIdentifier)) {
+                $response = Message::parseResponse(
+                    $this->cache->get($cacheIdentifier)
+                );
+                return Create::promiseFor($response);
             }
 
             if (strpos($uri, 'resource://') === 0
@@ -71,7 +79,12 @@ final class TestingClientProvider implements ClientProvider
 
     public function queueResponse(UriInterface $uri, ResponseInterface $response): void
     {
-        $this->responsesForUris[(string)$uri] = $response;
+        $this
+            ->cache
+            ->set(
+                self::cacheIdentifier($uri),
+                Message::toString($response)
+            );
     }
 
     public function getHistory(): array
@@ -99,6 +112,16 @@ final class TestingClientProvider implements ClientProvider
         $entry = array_shift($this->history);
 
         return $entry['request'];
+    }
+
+    public function flush(): void
+    {
+        $this->cache->flush();
+    }
+
+    private static function cacheIdentifier(UriInterface $uri): string
+    {
+        return sha1($uri->__toString());
     }
 
 }

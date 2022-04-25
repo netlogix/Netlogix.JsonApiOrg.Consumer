@@ -59,7 +59,7 @@ class Type
     /**
      * @var Uri
      */
-    protected $uri = '';
+    protected $uri;
 
     /**
      * @var array

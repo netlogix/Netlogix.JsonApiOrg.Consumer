@@ -265,7 +265,7 @@ class ConsumerBackend implements ConsumerBackendInterface
      */
     protected function fetch(Uri $uri, array $headers = [])
     {
-        $client = $this->clientProvider->createClient();
+        $client = $this->createClient();
 
         $response = $client->get($uri, [
             'headers' => $headers
