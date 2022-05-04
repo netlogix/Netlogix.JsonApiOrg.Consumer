@@ -7,3 +7,6 @@ Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackend:
         arguments:
           1:
             value: NetlogixJsonApiOrgConsumer_RequestsCache
+
+Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider:
+  className: Netlogix\JsonApiOrg\Consumer\Guzzle\DefaultClientProvider
