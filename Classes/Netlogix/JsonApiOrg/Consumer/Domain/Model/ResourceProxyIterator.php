@@ -6,6 +6,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
 use Neos\Cache\Frontend\VariableFrontend;
 use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Http\Uri;
+use Neos\Flow\Utility\Now;
 
 class ResourceProxyIterator implements \IteratorAggregate, \Countable
 {
@@ -15,14 +16,24 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
     protected $cache;
 
     /**
+     * @var Now
+     */
+    protected $now;
+
+    /**
      * @var array<ResourceProxy>
      */
     protected $data = [];
 
     /**
-     * @var array
+     * @var array|null
      */
-    protected $jsonResult;
+    protected $jsonResult = null;
+
+    /**
+     * @var string
+     */
+    protected $eTag = '';
 
     /**
      * @var string
@@ -42,6 +53,11 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
     public function injectCacheManager(CacheManager $cacheManager)
     {
         $this->cache = $cacheManager->getCache('NetlogixJsonApiOrgConsumer_ResultsCache');
+    }
+
+    public function injectNow(Now $now)
+    {
+        $this->now = $now;
     }
 
     public function initialize(callable $convertResourceDefinitionToResourceProxy): self
@@ -109,21 +125,41 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
     public function saveToCache(int $lifetime, string ...$tags): self
     {
         $identifier = sha1($this->uri);
-        $this->cache->set($identifier, $this->jsonResult, $tags, $lifetime);
+        sort($tags);
+        $absoluteLifetime = $lifetime === 0 ? 0 : $this->now->getTimestamp() + $lifetime;
+        $eTag = sha1($absoluteLifetime . join($tags));
+
+        if ($this->eTag === $eTag) {
+            return $this;
+        }
+        $this->eTag = $eTag;
+        $cacheData = [
+            'jsonResult' => $this->jsonResult,
+            'eTag' => $eTag,
+        ];
+
+        $this->cache->set($identifier, $cacheData, $tags, $lifetime);
         return $this;
     }
 
     public function loadFromCache(): self
     {
         $identifier = sha1($this->uri);
-        $jsonResult = $this->cache->get($identifier);
-        $this->jsonResult = $jsonResult !== false ? $jsonResult : null;
+        $cacheData = $this->cache->get($identifier);
+        if (is_array($cacheData)) {
+            $this->jsonResult = $cacheData['jsonResult'] ?? null;
+            $this->eTag = $cacheData['eTag'] ?? '';
+        } else {
+            $this->jsonResult = null;
+            $this->eTag = '';
+        }
         return $this;
     }
 
     protected function setRawJson(array $jsonResult): self
     {
         $this->jsonResult = $jsonResult;
+        $this->eTag = '';
         $this->data = [];
         return $this;
     }
