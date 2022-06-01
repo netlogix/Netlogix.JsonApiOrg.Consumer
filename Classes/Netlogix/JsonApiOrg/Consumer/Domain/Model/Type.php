@@ -59,7 +59,7 @@ class Type
     /**
      * @var Uri
      */
-    protected $uri = '';
+    protected $uri;
 
     /**
      * @var array
@@ -104,7 +104,8 @@ class Type
     }
 
     /**
-     * @return Uri
+     * @param Uri $uri
+     * @return void
      */
     public function setUri(Uri $uri)
     {
