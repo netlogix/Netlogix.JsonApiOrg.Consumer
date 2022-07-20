@@ -10,3 +10,13 @@ Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackend:
 
 Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider:
   className: Netlogix\JsonApiOrg\Consumer\Guzzle\DefaultClientProvider
+
+Netlogix\JsonApiOrg\Consumer\Guzzle\Middleware\EndpointCacheMiddleware:
+  properties:
+    cache:
+      object:
+        factoryObjectName: Neos\Flow\Cache\CacheManager
+        factoryMethodName: getCache
+        arguments:
+          1:
+            value: NetlogixJsonApiOrgConsumer_EndpointCache

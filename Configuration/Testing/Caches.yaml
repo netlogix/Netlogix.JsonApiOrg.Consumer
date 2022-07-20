@@ -1,7 +1,7 @@
 NetlogixJsonApiOrgConsumer_ResultsCache:
-    backend: Neos\Cache\Backend\FileBackend
-    backendOptions: []
+  backend: Neos\Cache\Backend\FileBackend
+  backendOptions: []
 
 NetlogixJsonApiOrgConsumer_HistoryMiddlewareCache:
-    frontend: Neos\Cache\Frontend\VariableFrontend
-    backend: Neos\Cache\Backend\FileBackend
+  frontend: Neos\Cache\Frontend\VariableFrontend
+  backend: Neos\Cache\Backend\FileBackend
