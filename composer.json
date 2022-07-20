@@ -10,7 +10,7 @@
         "ext-json": "*",
         "guzzlehttp/guzzle": "^6.5 || ^7.0",
         "guzzlehttp/promises": "^1.4",
-        "neos/flow": "^5.1"
+        "neos/flow": "^5.3"
     },
     "autoload": {
         "psr-0": {
