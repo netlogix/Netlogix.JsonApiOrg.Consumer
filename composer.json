@@ -13,8 +13,8 @@
         "neos/flow": "^5.3"
     },
     "autoload": {
-        "psr-0": {
-            "Netlogix\\JsonApiOrg\\Consumer": "Classes"
+        "psr-4": {
+            "Netlogix\\JsonApiOrg\\Consumer": "Classes/"
         }
     }
 }
