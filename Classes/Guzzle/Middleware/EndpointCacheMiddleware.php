@@ -10,6 +10,7 @@ use GuzzleHttp\Psr7\Utils;
 use Neos\Cache\Frontend\VariableFrontend;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Neos\Flow\Annotations as Flow;
 
 class EndpointCacheMiddleware
 {
@@ -37,7 +38,7 @@ class EndpointCacheMiddleware
             $cacheIdentifier = self::getCacheKey($request);
 
             if ($this->cache->has($cacheIdentifier)) {
-                [$body, $headers] = $this->cache->get($cacheIdentifier);
+                ['body' => $body, 'headers' => $headers] = $this->cache->get($cacheIdentifier);
                 $response = new Response(200, $headers, $body, '1.1');
                 return new FulfilledPromise(
                     $response

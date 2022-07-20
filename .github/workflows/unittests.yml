@@ -1,10 +1,10 @@
-name: functionaltests
+name: unittests
 
 on: [ push, pull_request ]
 
 jobs:
   unittests:
-    name: '[PHP ${{ matrix.php-version }} | Flow ${{ matrix.flow-version }} | MySQL ${{ matrix.mysql-version }}] Functional Tests'
+    name: '[PHP ${{ matrix.php-version }} | Flow ${{ matrix.flow-version }}] Unit Tests'
     runs-on: ubuntu-latest
 
     strategy:
@@ -12,19 +12,12 @@ jobs:
       matrix:
         php-version: [ 7.4 ]
         flow-version: [ 5.3 ]
-        mysql-version: [5.7]
 
         exclude: []
 
     env:
-      APP_ENV: true
-      FLOW_CONTEXT: Testing/Functional
+      FLOW_CONTEXT: Testing/Unit
       FLOW_DIST_FOLDER: flow-base-distribution
-      MYSQL_HOST: '127.0.0.1'
-      MYSQL_PORT: 3800
-      MYSQL_DATABASE: 'flow'
-      MYSQL_USER: 'flow'
-      MYSQL_PASSWORD: 'flow'
 
     steps:
       - uses: shivammathur/setup-php@v2
@@ -65,20 +58,6 @@ jobs:
         run: composer require netlogix/jsonapiorg-consumer:@dev
         working-directory: ${{ env.FLOW_DIST_FOLDER }}
 
-      - name: Set up MySQL
-        # Use haltuf's fork of mirromutth/mysql-action until https://github.com/mirromutth/mysql-action/pull/7 is merged
-        uses: haltuf/mysql-action@master
-        with:
-          'host port': ${{ env.MYSQL_PORT }}
-          'mysql version': ${{ matrix.mysql-version }}
-          'mysql database': ${{ env.MYSQL_DATABASE }}
-          'mysql user': ${{ env.MYSQL_USER }}
-          'mysql password': ${{ env.MYSQL_PASSWORD }}
-
-      - name: "Copy Settings.yaml.dist"
-        run: cp DistributionPackages/Netlogix.JsonApiOrg.Consumer/Settings.yaml.dist Configuration/Testing/Settings.yaml
-        working-directory: ${{ env.FLOW_DIST_FOLDER }}
-
       - name: Run tests
-        run: bin/phpunit -c DistributionPackages/Netlogix.JsonApiOrg.Consumer/phpunit.xml.dist --testsuite="Functional" --bootstrap "Build/BuildEssentials/PhpUnit/FunctionalTestBootstrap.php"
+        run: bin/phpunit -c DistributionPackages/Netlogix.JsonApiOrg.Consumer/phpunit.xml.dist --testsuite="Unit" --bootstrap "Build/BuildEssentials/PhpUnit/UnitTestBootstrap.php"
         working-directory: ${{ env.FLOW_DIST_FOLDER }}

@@ -1,0 +1,6 @@
+.idea/
+vendor/
+Packages/
+Build/
+
+composer.lock
