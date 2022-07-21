@@ -49,7 +49,7 @@ class EndpointCacheMiddleware
             assert($promise instanceof Promise);
 
             return $promise->then(
-                function (ResponseInterface $response) use ($request, $cacheIdentifier) {
+                function (ResponseInterface $response) use ($cacheIdentifier) {
                     if ($response->getStatusCode() !== 200) {
                         return $response;
                     }
