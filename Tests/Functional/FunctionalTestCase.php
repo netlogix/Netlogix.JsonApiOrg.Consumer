@@ -22,7 +22,7 @@ class FunctionalTestCase extends BaseTestCase
      */
     protected $consumerBackend;
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 

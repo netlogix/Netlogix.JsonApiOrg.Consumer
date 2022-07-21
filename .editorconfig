@@ -1,5 +1,4 @@
-# The IDE is assumed to use PSR-2 for PHP files.
-
+# The IDE is assumed to use PSR-12 for PHP files.
 root = true
 
 [*]
@@ -10,3 +9,6 @@ end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = false
+
+[*.{yml,yaml,feature}]
+indent_size = 2

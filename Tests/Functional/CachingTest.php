@@ -11,7 +11,7 @@ use Netlogix\JsonApiOrg\Consumer\Domain\Model as JsonApi;
 class CachingTest extends FunctionalTestCase
 {
 
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
