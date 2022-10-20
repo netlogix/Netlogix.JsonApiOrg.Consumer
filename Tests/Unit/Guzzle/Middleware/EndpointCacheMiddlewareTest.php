@@ -71,6 +71,27 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
     /**
      * @test
      */
+    public function Empty_paths_dont_cause_exception()
+    {
+        $uri = new \Neos\Flow\Http\Uri('https://foo');
+        $request = new Request('GET', $uri);
+
+        $this->assertNull($uri->getPath());
+
+        $options = [];
+
+        $mock = $this->createPartialMock(\stdClass::class, ['__invoke']);
+        $mock->expects($this->once())
+            ->method('__invoke')
+            ->with($request, $options);
+
+        $middleware = $this->middleware->__invoke(\Closure::fromCallable($mock));
+        $middleware($request, $options);
+    }
+
+    /**
+     * @test
+     */
     public function Endpoint_discovery_result_is_written_to_cache()
     {
         $request = new Request('GET', '/foo/.well-known/endpoint-discovery');
