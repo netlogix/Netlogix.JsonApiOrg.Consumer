@@ -4,7 +4,7 @@ declare(strict_types=1);
 namespace Netlogix\JsonApiOrg\Consumer\Guzzle\Middleware;
 
 use GuzzleHttp\Promise\FulfilledPromise;
-use GuzzleHttp\Promise\Promise;
+use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\Utils;
 use Neos\Cache\Frontend\VariableFrontend;
@@ -47,7 +47,7 @@ class EndpointCacheMiddleware
             }
 
             $promise = $handler($request, $options);
-            assert($promise instanceof Promise);
+            assert($promise instanceof PromiseInterface);
 
             return $promise->then(
                 function (ResponseInterface $response) use ($cacheIdentifier) {
