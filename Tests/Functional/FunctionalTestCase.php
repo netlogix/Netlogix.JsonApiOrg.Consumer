@@ -3,10 +3,11 @@ declare(strict_types=1);
 
 namespace Netlogix\JsonApiOrg\Consumer\Tests\Functional;
 
-use Neos\Flow\Http\Uri;
+use GuzzleHttp\Psr7\Uri;
 use Neos\Flow\Tests\FunctionalTestCase as BaseTestCase;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model as JsonApi;
 use Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackend;
+use Psr\Http\Message\UriInterface;
 
 class FunctionalTestCase extends BaseTestCase
 {
@@ -49,7 +50,7 @@ class FunctionalTestCase extends BaseTestCase
         $this->type->__consumerBackend = $this->consumerBackend;
     }
 
-    public function asDataUri(array $fixture): Uri
+    public function asDataUri(array $fixture): UriInterface
     {
         $dataUri = 'data:application/json;base64,' . base64_encode(json_encode($fixture));
         return new Uri($dataUri);

@@ -8,6 +8,7 @@ use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Psr7\Uri;
 use Neos\Cache\Frontend\VariableFrontend;
 use Neos\Flow\Tests\UnitTestCase;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\Middleware\EndpointCacheMiddleware;
@@ -73,7 +74,7 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
      */
     public function Empty_paths_dont_cause_exception()
     {
-        $uri = new \Neos\Flow\Http\Uri('https://foo');
+        $uri = new Uri('https://foo');
         $request = new Request('GET', $uri);
 
         $this->assertNull($uri->getPath());

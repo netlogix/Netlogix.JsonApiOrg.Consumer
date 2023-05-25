@@ -10,8 +10,8 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
  * source code.
  */
 
+use GuzzleHttp\Psr7\Uri;
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Http\Uri;
 use Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackendInterface;
 
 class ResourceProxy implements \ArrayAccess
