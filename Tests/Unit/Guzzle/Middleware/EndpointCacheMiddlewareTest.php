@@ -43,7 +43,7 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
         $request = new Request('POST', '/uri');
         $options = [];
 
-        $mock = $this->createPartialMock(\stdClass::class, ['__invoke']);
+        $mock = $this->getMockBuilder(ClosureLike::class)->getMock();
         $mock->expects($this->once())
             ->method('__invoke')
             ->with($request, $options);
@@ -60,7 +60,7 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
         $request = new Request('GET', '/uri');
         $options = [];
 
-        $mock = $this->createPartialMock(\stdClass::class, ['__invoke']);
+        $mock = $this->getMockBuilder(ClosureLike::class)->getMock();
         $mock->expects($this->once())
             ->method('__invoke')
             ->with($request, $options);
@@ -77,11 +77,11 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
         $uri = new Uri('https://foo');
         $request = new Request('GET', $uri);
 
-        $this->assertNull($uri->getPath());
+        $this->assertEmpty($uri->getPath());
 
         $options = [];
 
-        $mock = $this->createPartialMock(\stdClass::class, ['__invoke']);
+        $mock = $this->getMockBuilder(ClosureLike::class)->getMock();
         $mock->expects($this->once())
             ->method('__invoke')
             ->with($request, $options);
@@ -103,11 +103,11 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
         $promise
             ->expects($this->once())
             ->method('then')
-            ->will($this->returnCallback(function (\Closure $callback) use($response) {
-                return $callback($response);
+            ->will($this->returnCallback(function (\Closure $callback) use ($response) {
+                return new FulfilledPromise($callback($response));
             }));
 
-        $mock = $this->createPartialMock(\stdClass::class, ['__invoke']);
+        $mock = $this->getMockBuilder(ClosureLike::class)->getMock();
         $mock->expects($this->once())
             ->method('__invoke')
             ->with($request, $options)
@@ -132,7 +132,7 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
         $response = $this->getResponse();
         $options = [];
 
-        $mock = $this->createPartialMock(\stdClass::class, ['__invoke']);
+        $mock = $this->getMockBuilder(ClosureLike::class)->getMock();
         $mock->expects($this->never())
             ->method('__invoke');
 
@@ -166,11 +166,9 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
         $promise
             ->expects($this->once())
             ->method('then')
-            ->will($this->returnCallback(function (\Closure $callback) use($response) {
-                return $callback($response);
-            }));
+            ->willReturn(new FulfilledPromise($response));
 
-        $mock = $this->createPartialMock(\stdClass::class, ['__invoke']);
+        $mock = $this->getMockBuilder(ClosureLike::class)->getMock();
         $mock->expects($this->once())
             ->method('__invoke')
             ->with($request, $options)
