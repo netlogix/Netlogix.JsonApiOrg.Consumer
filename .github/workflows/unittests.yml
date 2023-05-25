@@ -13,7 +13,10 @@ jobs:
         php-version: [ 7.4, 8.0, 8.1, 8.2 ]
         flow-version: [ 7.3, 8.3 ]
 
-        exclude: []
+        exclude:
+          -
+            php-version: 7.4
+            flow-version: 8.3
 
     env:
       FLOW_CONTEXT: Testing/Unit

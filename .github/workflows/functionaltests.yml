@@ -14,7 +14,10 @@ jobs:
         flow-version: [ 7.3, 8.3 ]
         mysql-version: [5.7]
 
-        exclude: []
+        exclude:
+          -
+            php-version: 7.4
+            flow-version: 8.3
 
     env:
       APP_ENV: true
