@@ -54,7 +54,7 @@ final class TestingClientProvider implements ClientProvider
             }
 
             if (strpos($uri, 'resource://') === 0
-                || strpos($uri, 'data://') === 0) {
+                || strpos($uri, 'data:') === 0) {
                 $response = file_get_contents($uri);
 
                 return Create::promiseFor(

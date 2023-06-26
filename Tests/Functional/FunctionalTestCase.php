@@ -56,7 +56,7 @@ class FunctionalTestCase extends BaseTestCase
         return new Uri($dataUri);
     }
 
-    public function provideJsonResponse()
+    public static function provideJsonResponse()
     {
         $entity = [
             'id' => 0,
