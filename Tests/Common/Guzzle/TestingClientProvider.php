@@ -66,7 +66,7 @@ final class TestingClientProvider implements ClientProvider
                 );
             }
 
-            throw new \RuntimeException(sprintf('No Response queued for URI "%s"', $uri), 1624304664);
+            throw new NoResponseQueued(sprintf('No Response queued for URI "%s"', $uri), 1624304664);
         };
 
         $handlerStack = HandlerStack::create($requestHandler);
