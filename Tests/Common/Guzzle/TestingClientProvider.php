@@ -43,8 +43,16 @@ final class TestingClientProvider implements ClientProvider
     public function createClient(): Client
     {
         $requestHandler = function (RequestInterface $request) {
-            $uri = (string)$request->getUri();
-            $cacheIdentifier = self::cacheIdentifier($request->getUri());
+            $requestUri = $request->getUri();
+            if ($requestUri->getQuery() && strpos($requestUri->getQuery(), '[') !== false) {
+                // url was crafted manually without encoding the query
+                $requestUri = $requestUri->withQuery(urlencode($requestUri->getQuery()));
+            }
+            if ($requestUri->getQuery()) {
+                $requestUri = $requestUri->withQuery(str_replace('=', '%3D', $requestUri->getQuery()));
+            }
+            $uri = (string) $requestUri;
+            $cacheIdentifier = self::cacheIdentifier($requestUri);
 
             if ($this->cache->has($cacheIdentifier)) {
                 $response = Message::parseResponse(
@@ -55,6 +63,9 @@ final class TestingClientProvider implements ClientProvider
 
             if (strpos($uri, 'resource://') === 0
                 || strpos($uri, 'data:') === 0) {
+                $uri = (string) $requestUri
+                    ->withQuery('')
+                    ->withFragment('');
                 $response = file_get_contents($uri);
 
                 return Create::promiseFor(
