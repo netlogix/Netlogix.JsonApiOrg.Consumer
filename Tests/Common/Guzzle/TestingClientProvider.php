@@ -14,6 +14,7 @@ use Neos\Cache\Frontend\FrontendInterface;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Core\Bootstrap;
+use Neos\Flow\Http\Helper\UriHelper;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -43,14 +44,8 @@ final class TestingClientProvider implements ClientProvider
     public function createClient(): Client
     {
         $requestHandler = function (RequestInterface $request) {
-            $requestUri = $request->getUri();
-            if ($requestUri->getQuery() && strpos($requestUri->getQuery(), '[') !== false) {
-                // url was crafted manually without encoding the query
-                $requestUri = $requestUri->withQuery(urlencode($requestUri->getQuery()));
-            }
-            if ($requestUri->getQuery()) {
-                $requestUri = $requestUri->withQuery(str_replace('=', '%3D', $requestUri->getQuery()));
-            }
+            # Make sure uri is normalized for stable cache identifier
+            $requestUri = UriHelper::uriWithArguments($request->getUri(), UriHelper::parseQueryIntoArguments($request->getUri()));
             $uri = (string) $requestUri;
             $cacheIdentifier = self::cacheIdentifier($requestUri);
 
