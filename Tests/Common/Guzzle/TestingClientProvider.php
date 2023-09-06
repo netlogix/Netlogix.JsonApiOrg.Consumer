@@ -48,9 +48,6 @@ final class TestingClientProvider implements ClientProvider
                 // url was crafted manually without encoding the query
                 $requestUri = $requestUri->withQuery(urlencode($requestUri->getQuery()));
             }
-            if ($requestUri->getQuery()) {
-                $requestUri = $requestUri->withQuery(str_replace('=', '%3D', $requestUri->getQuery()));
-            }
             $uri = (string) $requestUri;
             $cacheIdentifier = self::cacheIdentifier($requestUri);
 
