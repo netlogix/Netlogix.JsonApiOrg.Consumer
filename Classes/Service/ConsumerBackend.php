@@ -11,17 +11,18 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  */
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\Uri;
 use Neos\Cache\Exception\InvalidDataException;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Http\Helper\UriHelper;
-use Neos\Flow\Http\Uri;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
+use Psr\Http\Message\UriInterface;
 
 /**
  * @Flow\Scope("singleton")
@@ -83,11 +84,11 @@ class ConsumerBackend implements ConsumerBackendInterface
     }
 
     /**
-     * @param Uri $endpointDiscovery
+     * @param UriInterface $endpointDiscovery
      * @throws InvalidDataException
      * @throws \Neos\Cache\Exception
      */
-    public function registerEndpointsByEndpointDiscovery(Uri $endpointDiscovery)
+    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery)
     {
         $result = $this->requestJson($endpointDiscovery);
         foreach ($result['links'] as $link) {
@@ -180,12 +181,12 @@ class ConsumerBackend implements ConsumerBackendInterface
     }
 
     /**
-     * @param Uri $queryUri
+     * @param UriInterface $queryUri
      * @return ResourceProxyIterator
      * @throws InvalidDataException
      * @throws \Neos\Cache\Exception
      */
-    public function fetchFromUri(Uri $queryUri)
+    public function fetchFromUri(UriInterface $queryUri)
     {
         $resourceProxy = ResourceProxyIterator::fromUri($queryUri);
         $resourceProxy = $resourceProxy->loadFromCache();

@@ -3,10 +3,13 @@ declare(strict_types=1);
 
 namespace Netlogix\JsonApiOrg\Consumer\Tests\Functional;
 
+use GuzzleHttp\Psr7\Uri;
+use Neos\Cache\Backend\FileBackendEntryDto;
 use Neos\Cache\Backend\WithSetupInterface;
 use Neos\Cache\Frontend\FrontendInterface;
 use Neos\Flow\Cache\CacheManager;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model as JsonApi;
+use Netlogix\JsonApiOrg\Consumer\Tests\Common\Guzzle\NoResponseQueued;
 
 class CachingTest extends FunctionalTestCase
 {
@@ -22,6 +25,7 @@ class CachingTest extends FunctionalTestCase
         if ($cache->getBackend() instanceof WithSetupInterface) {
             $cache->getBackend()->setup();
         }
+        $cache->flush();
     }
 
     /**
@@ -30,7 +34,7 @@ class CachingTest extends FunctionalTestCase
      */
     public function JSON_data_can_be_saved_to_cache(array $jsonApiFixture)
     {
-        $uri = $this->asDataUri([]);
+        $uri = new Uri('https://some-url.example/foo');
 
         JsonApi\ResourceProxyIterator::fromUri($uri)
             ->withJsonResult($jsonApiFixture)
@@ -50,19 +54,30 @@ class CachingTest extends FunctionalTestCase
      */
     public function Cached_data_respects_cache_lifetime(array $jsonApiFixture)
     {
-        $uri = $this->asDataUri([]);
+        $uri = new Uri('https://some-url.example/foo');
 
         JsonApi\ResourceProxyIterator::fromUri($uri)
             ->withJsonResult($jsonApiFixture)
             ->saveToCache(1);
 
+        /**
+         * @see FileBackendEntryDto::isExpired()
+         */
+        $previousTime = $_SERVER['REQUEST_TIME'];
+        $_SERVER['REQUEST_TIME'] = time() + 2;
         sleep(2);
 
-        $result = $this->consumerBackend
-            ->fetchFromUri($uri)
-            ->getArrayCopy();
+        self::expectException(NoResponseQueued::class);
 
-        $this->assertCount(0, $result);
+        try {
+            $this->consumerBackend
+                ->fetchFromUri($uri)
+                ->getArrayCopy();
+        } catch (\Throwable $t) {
+            throw $t;
+        } finally {
+            $_SERVER['REQUEST_TIME'] = $previousTime;
+        }
     }
 
     /**
@@ -71,7 +86,7 @@ class CachingTest extends FunctionalTestCase
      */
     public function Cached_data_will_not_be_written_to_cache_again_with_same_lifetime_and_tags(array $jsonApiFixture)
     {
-        $uri = $this->asDataUri([]);
+        $uri = new Uri('https://some-url.example/foo');
         $tags = ['foo', 'bar', 'baz'];
 
         JsonApi\ResourceProxyIterator::fromUri($uri)
@@ -101,7 +116,7 @@ class CachingTest extends FunctionalTestCase
      */
     public function Cached_data_will_not_be_written_to_cache_again_with_same_lifetime_and_differently_ordered_tags(array $jsonApiFixture)
     {
-        $uri = $this->asDataUri([]);
+        $uri = new Uri('https://some-url.example/foo');
         $tags = ['foo', 'bar', 'baz'];
 
         JsonApi\ResourceProxyIterator::fromUri($uri)
@@ -131,7 +146,7 @@ class CachingTest extends FunctionalTestCase
      */
     public function Cached_data_will_be_written_to_cache_again_if_lifetime_differs(array $jsonApiFixture)
     {
-        $uri = $this->asDataUri([]);
+        $uri = new Uri('https://some-url.example/foo');
         $tags = ['foo', 'bar', 'baz'];
 
         JsonApi\ResourceProxyIterator::fromUri($uri)
@@ -161,7 +176,7 @@ class CachingTest extends FunctionalTestCase
      */
     public function Cached_data_will_be_written_to_cache_again_if_tags_differs(array $jsonApiFixture)
     {
-        $uri = $this->asDataUri([]);
+        $uri = new Uri('https://some-url.example/foo');
         $tags = ['foo', 'bar', 'baz'];
 
         JsonApi\ResourceProxyIterator::fromUri($uri)

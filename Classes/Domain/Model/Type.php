@@ -11,8 +11,8 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
  */
 
 use Neos\Flow\Annotations as Flow;
-use Neos\Flow\Http\Uri;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
+use Psr\Http\Message\UriInterface;
 
 class Type
 {
@@ -57,7 +57,7 @@ class Type
     protected $properties = [];
 
     /**
-     * @var Uri
+     * @var UriInterface
      */
     protected $uri;
 
@@ -76,14 +76,14 @@ class Type
      * @param string $typeName
      * @param string $resourceClassName
      * @param array $properties
-     * @param Uri $uri
+     * @param UriInterface $uri
      * @param array $defaultIncludes
      */
     public function __construct(
         $typeName,
         $resourceClassName = ResourceProxy::class,
         array $properties = [],
-        Uri $uri = null,
+        UriInterface $uri = null,
         array $defaultIncludes = []
     ) {
         $this->typeName = (string)$typeName;
@@ -95,19 +95,12 @@ class Type
         $this->defaultIncludes = $defaultIncludes;
     }
 
-    /**
-     * @return Uri
-     */
-    public function getUri()
+    public function getUri(): UriInterface
     {
         return $this->uri;
     }
 
-    /**
-     * @param Uri $uri
-     * @return void
-     */
-    public function setUri(Uri $uri)
+    public function setUri(UriInterface $uri): void
     {
         $this->uri = $uri;
     }

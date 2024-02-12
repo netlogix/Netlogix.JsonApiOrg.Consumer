@@ -31,7 +31,7 @@ class EndpointCacheMiddleware
                 return $handler($request, $options);
             }
 
-            $requestPath = $request->getUri()->getPath() ?? '';
+            $requestPath = $request->getUri()->getPath() ?: '';
             if (!self::str_ends_with(rtrim($requestPath, '/'), '/.well-known/endpoint-discovery')) {
                 return $handler($request, $options);
             }

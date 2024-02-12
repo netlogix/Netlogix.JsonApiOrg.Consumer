@@ -5,8 +5,8 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
 
 use Neos\Cache\Frontend\VariableFrontend;
 use Neos\Flow\Cache\CacheManager;
-use Neos\Flow\Http\Uri;
 use Neos\Flow\Utility\Now;
+use Psr\Http\Message\UriInterface;
 
 class ResourceProxyIterator implements \IteratorAggregate, \Countable
 {
@@ -45,7 +45,7 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
         $this->uri = $uri;
     }
 
-    public static function fromUri(Uri $uri): self
+    public static function fromUri(UriInterface $uri): self
     {
         return new static((string)$uri);
     }

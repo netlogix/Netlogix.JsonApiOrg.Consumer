@@ -57,7 +57,7 @@ final class TestingClientProvider implements ClientProvider
             }
 
             if (strpos($uri, 'resource://') === 0
-                || strpos($uri, 'data://') === 0) {
+                || strpos($uri, 'data:') === 0) {
                 $uri = (string) $requestUri
                     ->withQuery('')
                     ->withFragment('');
@@ -72,7 +72,7 @@ final class TestingClientProvider implements ClientProvider
                 );
             }
 
-            throw new \RuntimeException(sprintf('No Response queued for URI "%s"', $uri), 1624304664);
+            throw new NoResponseQueued(sprintf('No Response queued for URI "%s"', $uri), 1624304664);
         };
 
         $handlerStack = HandlerStack::create($requestHandler);

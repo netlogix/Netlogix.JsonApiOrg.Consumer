@@ -10,12 +10,12 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  * source code.
  */
 
-use Neos\Flow\Http\Uri;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
+use Psr\Http\Message\UriInterface;
 
 interface ConsumerBackendInterface
 {
@@ -31,9 +31,9 @@ interface ConsumerBackendInterface
     public function getType($typeName);
 
     /**
-     * @param Uri $endpointDiscovery
+     * @param UriInterface $endpointDiscovery
      */
-    public function registerEndpointsByEndpointDiscovery(Uri $endpointDiscovery);
+    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery);
 
     /**
      * @param string $type
@@ -46,10 +46,10 @@ interface ConsumerBackendInterface
     public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null);
 
     /**
-     * @param Uri $queryUri
+     * @param UriInterface $queryUri
      * @return ResourceProxyIterator
      */
-    public function fetchFromUri(Uri $queryUri);
+    public function fetchFromUri(UriInterface $queryUri);
 
     /**
      * @param mixed $type
