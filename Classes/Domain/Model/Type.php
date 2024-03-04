@@ -95,7 +95,7 @@ class Type
         $this->defaultIncludes = $defaultIncludes;
     }
 
-    public function getUri(): UriInterface
+    public function getUri(): ?UriInterface
     {
         return $this->uri;
     }
