@@ -10,6 +10,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  * source code.
  */
 
+use GuzzleHttp\Promise\PromiseInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\PageInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
@@ -46,10 +47,22 @@ interface ConsumerBackendInterface
     public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null);
 
     /**
+     * Fetch data from the given URI synchronously.
+     * The resulting ResourceProxyIterator is fully populated.
+     *
      * @param UriInterface $queryUri
      * @return ResourceProxyIterator
      */
     public function fetchFromUri(UriInterface $queryUri);
+
+    /**
+     * Fetch data from the given URI asynchronously.
+     * The request will be executed immediately.
+     *
+     * @param UriInterface $queryUri
+     * @return PromiseInterface<ResourceProxyIterator>
+     */
+    public function requestFromUri(UriInterface $queryUri): PromiseInterface;
 
     /**
      * @param mixed $type

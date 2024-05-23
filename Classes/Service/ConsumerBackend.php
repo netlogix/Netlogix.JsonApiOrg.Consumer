@@ -11,6 +11,8 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  */
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Promise\FulfilledPromise;
+use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Uri;
 use Neos\Cache\Exception\InvalidDataException;
 use Neos\Cache\Frontend\StringFrontend;
@@ -22,6 +24,7 @@ use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 
 /**
@@ -90,7 +93,9 @@ class ConsumerBackend implements ConsumerBackendInterface
      */
     public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery)
     {
-        $result = $this->requestJson($endpointDiscovery);
+        $result = $this
+            ->requestJson($endpointDiscovery)
+            ->wait();
         foreach ($result['links'] as $link) {
             if (!is_array($link) || !isset($link['meta'])) {
                 continue;
@@ -181,26 +186,52 @@ class ConsumerBackend implements ConsumerBackendInterface
     }
 
     /**
+     * Fetch data from the given URI synchronously.
+     * The resulting ResourceProxyIterator is fully populated.
+     *
      * @param UriInterface $queryUri
      * @return ResourceProxyIterator
      * @throws InvalidDataException
      * @throws \Neos\Cache\Exception
      */
-    public function fetchFromUri(UriInterface $queryUri)
+    public function fetchFromUri(UriInterface $queryUri): ResourceProxyIterator
+    {
+        return $this
+            ->requestFromUri($queryUri)
+            ->wait();
+    }
+
+    /**
+     * Fetch data from the given URI asynchronously.
+     * The request will be executed immediately.
+     *
+     * @param UriInterface $queryUri
+     * @return PromiseInterface<ResourceProxyIterator>
+     * @throws InvalidDataException
+     * @throws \Neos\Cache\Exception
+     */
+    public function requestFromUri(UriInterface $queryUri): PromiseInterface
     {
         $resourceProxy = ResourceProxyIterator::fromUri($queryUri);
         $resourceProxy = $resourceProxy->loadFromCache();
 
         if (!$resourceProxy->hasResults()) {
-            $jsonResult = $this->requestJson($queryUri);
-            $resourceProxy = $resourceProxy->withJsonResult($jsonResult);
+            $result = $this
+                ->requestJson($queryUri)
+                ->then(function(array $jsonResult) use ($resourceProxy) {
+                    return $resourceProxy->withJsonResult($jsonResult);
+                });
+        } else {
+            $result = new FulfilledPromise($resourceProxy);
         }
 
-        $convertResourceDefinitionToResourceProxy = function (array $resourceDefinition): ?ResourceProxy {
-            return $this->convertResourceDefinitionToResourceProxy($resourceDefinition);
-        };
-        $resourceProxy->initialize($convertResourceDefinitionToResourceProxy);
-        return $resourceProxy;
+        return $result->then(function(ResourceProxyIterator $resourceProxy) {
+            $convertResourceDefinitionToResourceProxy = function (array $resourceDefinition): ?ResourceProxy {
+                return $this->convertResourceDefinitionToResourceProxy($resourceDefinition);
+            };
+            $resourceProxy->initialize($convertResourceDefinitionToResourceProxy);
+            return $resourceProxy;
+        });
     }
 
     /**
@@ -215,11 +246,12 @@ class ConsumerBackend implements ConsumerBackendInterface
 
     /**
      * @param Uri $uri
-     * @return array
+     * @return PromiseInterface<array>
      * @throws InvalidDataException
      * @throws \Neos\Cache\Exception
+     * @return PromiseInterface<array>
      */
-    protected function requestJson(Uri $uri)
+    protected function requestJson(Uri $uri): PromiseInterface
     {
         $uriString = (string)$uri;
 
@@ -231,13 +263,21 @@ class ConsumerBackend implements ConsumerBackendInterface
         $cacheIdentifier = md5(serialize($headersForCacheIdentifier) . '|' . $uriString);
 
         if ($this->requestsCache->has($cacheIdentifier)) {
-            $result = $this->requestsCache->get($cacheIdentifier);
+            $response = new FulfilledPromise(
+                $this->requestsCache->get($cacheIdentifier)
+            );
         } else {
-            $result = $this->fetch($uri, $headers);
-            $this->requestsCache->set($cacheIdentifier, $result);
+            $response = $this
+                ->fetch($uri, $headers)
+                ->then(function(string $result) use ($cacheIdentifier) {
+                    $this->requestsCache->set($cacheIdentifier, $result);
+                    return $result;
+                });
         }
 
-        return json_decode($result, true);
+        return $response->then(function(string $result) {
+            return json_decode($result, true);
+        });
     }
 
     /**
@@ -262,17 +302,18 @@ class ConsumerBackend implements ConsumerBackendInterface
     /**
      * @param Uri $uri
      * @param array<string, string> $headers
-     * @return string
+     * @return PromiseInterface<string>
      */
-    protected function fetch(Uri $uri, array $headers = [])
+    protected function fetch(Uri $uri, array $headers = []): PromiseInterface
     {
-        $client = $this->createClient();
-
-        $response = $client->get($uri, [
-            'headers' => $headers
-        ]);
-
-        return $response->getBody()->getContents();
+        return $this
+            ->createClient()
+            ->getAsync($uri, [
+                'headers' => $headers
+            ])
+            ->then(function (ResponseInterface $response) {
+                return $response->getBody()->getContents();
+            });
     }
 
     protected function convertResourceDefinitionToResourceProxy(array $resourceDefinition): ?ResourceProxy
@@ -318,7 +359,7 @@ class ConsumerBackend implements ConsumerBackendInterface
         return $type . "\n" . $id;
     }
 
-    protected function createClient(): Client
+    public function createClient(): Client
     {
         return $this->clientProvider->createClient();
     }
