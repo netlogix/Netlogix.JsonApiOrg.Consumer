@@ -48,37 +48,37 @@ class ResourceProxy implements \ArrayAccess
     /**
      * @inheritdoc
      */
-    public function offsetExists($propertyName)
+    public function offsetExists(mixed $offset): bool
     {
-        return $this->type->getPropertyDefinition($propertyName) !== Type::PROPERTY_UNDEFINED;
+        return $this->type->getPropertyDefinition($offset) !== Type::PROPERTY_UNDEFINED;
     }
 
     /**
      * @inheritdoc
      */
-    public function offsetGet($propertyName)
+    public function offsetGet(mixed $offset): mixed
     {
-        switch ($this->type->getPropertyDefinition($propertyName)) {
+        switch ($this->type->getPropertyDefinition($offset)) {
             case Type::PROPERTY_ATTRIBUTE:
-                return $this->getAttribute($propertyName);
+                return $this->getAttribute($offset);
             case Type::PROPERTY_SINGLE_RELATIONSHIP:
-                return $this->getSingleRelationship($propertyName);
+                return $this->getSingleRelationship($offset);
             case Type::PROPERTY_COLLECTION_RELATIONSHIP:
-                return $this->getCollectionRelationship($propertyName);
+                return $this->getCollectionRelationship($offset);
         }
     }
 
     /**
      * @inheritdoc
      */
-    public function offsetSet($propertyName, $value)
+    public function offsetSet(mixed $offset, mixed $value): void
     {
     }
 
     /**
      * @inheritdoc
      */
-    public function offsetUnset($propertyName)
+    public function offsetUnset(mixed $offset): void
     {
     }
 
