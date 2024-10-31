@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
 
+use Generator;
 use Neos\Cache\Frontend\VariableFrontend;
 use Neos\Flow\Cache\CacheManager;
 use Neos\Flow\Utility\Now;
@@ -85,9 +86,9 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
     }
 
     /**
-     * @return \Generator
+     * @return Generator
      */
-    public function getIterator()
+    public function getIterator(): Generator
     {
         yield from $this->data;
     }
@@ -100,7 +101,7 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
     /**
      * @return int
      */
-    public function count()
+    public function count(): int
     {
         if (isset($this->jsonResult)
             && array_key_exists('meta', $this->jsonResult)
