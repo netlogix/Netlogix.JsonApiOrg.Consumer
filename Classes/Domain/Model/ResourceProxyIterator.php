@@ -3,14 +3,20 @@ declare(strict_types=1);
 
 namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
 
+use Countable;
 use Generator;
+use IteratorAggregate;
 use Neos\Cache\Frontend\VariableFrontend;
 use Neos\Flow\Cache\CacheManager;
+use Neos\Flow\Log\ThrowableStorageInterface;
 use Neos\Flow\Utility\Now;
 use Psr\Http\Message\UriInterface;
+use Throwable;
 
-class ResourceProxyIterator implements \IteratorAggregate, \Countable
+class ResourceProxyIterator implements IteratorAggregate, Countable
 {
+    protected ?ThrowableStorageInterface $throwableStorage;
+
     /**
      * @var VariableFrontend
      */
@@ -59,6 +65,11 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
     public function injectNow(Now $now)
     {
         $this->now = $now;
+    }
+
+    public function injectThrowableStorage(ThrowableStorageInterface $throwableStorage): void
+    {
+        $this->throwableStorage = $throwableStorage;
     }
 
     public function initialize(callable $convertResourceDefinitionToResourceProxy): self
@@ -139,14 +150,25 @@ class ResourceProxyIterator implements \IteratorAggregate, \Countable
             'eTag' => $eTag,
         ];
 
-        $this->cache->set($identifier, $cacheData, $tags, $lifetime);
+        try {
+            $this->cache->set($identifier, $cacheData, $tags, $lifetime);
+        } catch (Throwable $t) {
+            $this->throwableStorage?->logThrowable($t);
+        }
+
         return $this;
     }
 
     public function loadFromCache(): self
     {
         $identifier = sha1($this->uri);
-        $cacheData = $this->cache->get($identifier);
+        $cacheData = null;
+        try {
+            $cacheData = $this->cache->get($identifier);
+        } catch (Throwable $t) {
+            $this->throwableStorage?->logThrowable($t);
+        }
+
         if (is_array($cacheData)) {
             $this->jsonResult = $cacheData['jsonResult'] ?? null;
             $this->eTag = $cacheData['eTag'] ?? '';
