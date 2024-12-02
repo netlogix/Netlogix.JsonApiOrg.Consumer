@@ -11,7 +11,7 @@ namespace Netlogix\JsonApiOrg\Consumer\Domain\Model;
  */
 
 use GuzzleHttp\Psr7\Uri;
-use Neos\Flow\Annotations as Flow;
+use JsonSchema\Exception\RuntimeException;
 use Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackendInterface;
 
 class ResourceProxy implements \ArrayAccess
@@ -92,6 +92,12 @@ class ResourceProxy implements \ArrayAccess
 
     protected function loadRelationship(string $propertyName)
     {
+        if (!array_key_exists('relationships', $this->payload)) {
+            $typeName = $this->type->getTypeName();
+            throw new RuntimeException(
+                "relationships['$propertyName'] could not be loaded for $typeName. payload['relationships'] is not defined.",
+                1723619674);
+        }
         if (array_key_exists('data', $this->payload['relationships'][$propertyName])) {
             return;
         }
