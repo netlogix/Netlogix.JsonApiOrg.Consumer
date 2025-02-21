@@ -27,6 +27,8 @@ use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 
+use function strtolower;
+
 /**
  * @Flow\Scope("singleton")
  */
@@ -256,10 +258,18 @@ class ConsumerBackend implements ConsumerBackendInterface
         $uriString = (string)$uri;
 
         $headers = $this->getRequestHeaders($uriString);
+
         $headersForCacheIdentifier = [];
+        $storeResponse = true;
+
         foreach ($headers as $key => $value) {
+            $key = strtolower($key);
+            if ($key === 'cache-control' && strtolower($value) === 'no-store') {
+                $storeResponse = false;
+            }
             $headersForCacheIdentifier[] = sprintf('%s: %s', $key, $value);
         }
+
         $cacheIdentifier = md5(serialize($headersForCacheIdentifier) . '|' . $uriString);
 
         if ($this->requestsCache->has($cacheIdentifier)) {
@@ -269,8 +279,10 @@ class ConsumerBackend implements ConsumerBackendInterface
         } else {
             $response = $this
                 ->fetch($uri, $headers)
-                ->then(function(string $result) use ($cacheIdentifier) {
-                    $this->requestsCache->set($cacheIdentifier, $result);
+                ->then(function(string $result) use ($cacheIdentifier, $storeResponse) {
+                    if (!$storeResponse) {
+                        $this->requestsCache->set($cacheIdentifier, $result);
+                    }
                     return $result;
                 });
         }
