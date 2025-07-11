@@ -280,7 +280,7 @@ class ConsumerBackend implements ConsumerBackendInterface
             $response = $this
                 ->fetch($uri, $headers)
                 ->then(function(string $result) use ($cacheIdentifier, $storeResponse) {
-                    if (!$storeResponse) {
+                    if ($storeResponse) {
                         $this->requestsCache->set($cacheIdentifier, $result);
                     }
                     return $result;
