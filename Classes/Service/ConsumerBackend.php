@@ -11,6 +11,8 @@ namespace Netlogix\JsonApiOrg\Consumer\Service;
  */
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException as GuzzleClientException;
+use GuzzleHttp\Exception\ServerException as GuzzleServerException;
 use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Uri;
@@ -23,9 +25,12 @@ use Netlogix\JsonApiOrg\Consumer\Domain\Model\Arguments\SortInterface;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxy;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\ResourceProxyIterator;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
+use Netlogix\JsonApiOrg\Consumer\Exception\Client\ClientException;
+use Netlogix\JsonApiOrg\Consumer\Exception\Server\ServerException;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
+use Throwable;
 
 use function strtolower;
 
@@ -325,6 +330,15 @@ class ConsumerBackend implements ConsumerBackendInterface
             ])
             ->then(function (ResponseInterface $response) {
                 return $response->getBody()->getContents();
+            })
+            ->otherwise(function (Throwable $exception) {
+                if ($exception instanceof GuzzleServerException) {
+                    throw ServerException::wrapException($exception->getRequest(), $exception);
+                }
+                if ($exception instanceof GuzzleClientException) {
+                    throw ClientException::wrapException($exception->getRequest(), $exception);
+                }
+                throw $exception;
             });
     }
 
