@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Netlogix\JsonApiOrg\Consumer\Guzzle\Middleware;
@@ -12,31 +13,62 @@ use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Neos\Flow\Annotations as Flow;
 
+use function array_filter;
+use function hash;
+use function in_array;
+use function json_encode;
+use function str_contains;
+
+use const ARRAY_FILTER_USE_KEY;
+
 class EndpointCacheMiddleware
 {
-
-    protected array $httpMethods = ['GET' => true];
-
     /**
      * @var VariableFrontend
      * @Flow\Inject
      */
     protected $cache;
 
+    protected function __construct(
+        public readonly array $httpMethods,
+        public readonly array $headerNames
+    ) {
+    }
+
+    public static function create(): static
+    {
+        return new static([], []);
+    }
+
+    public function withHttpMethods(string ...$httpMethods): static
+    {
+        return new static(
+            array_map('strtoupper', $httpMethods),
+            $this->headerNames
+        );
+    }
+
+    public function withHeaderNames(string ...$headerNames): static
+    {
+        return new static(
+            $this->httpMethods,
+            $headerNames
+        );
+    }
+
     public function __invoke(callable $handler)
     {
         return function (RequestInterface $request, array $options) use (&$handler) {
-            if (!isset($this->httpMethods[strtoupper($request->getMethod())])) {
+            if (!in_array(strtoupper($request->getMethod()), $this->httpMethods)) {
                 // No caching for this method allowed
                 return $handler($request, $options);
             }
 
-            $requestPath = $request->getUri()->getPath() ?: '';
-            if (!self::str_ends_with(rtrim($requestPath, '/'), '/.well-known/endpoint-discovery')) {
+            if (!str_contains($request->getUri()->getPath() ?: '', '/.well-known/endpoint-discovery')) {
                 return $handler($request, $options);
             }
 
-            $cacheIdentifier = self::getCacheKey($request);
+            $cacheIdentifier = $this->getCacheKey($request);
 
             if ($this->cache->has($cacheIdentifier)) {
                 ['body' => $body, 'headers' => $headers] = $this->cache->get($cacheIdentifier);
@@ -66,7 +98,7 @@ class EndpointCacheMiddleware
 
                     $this->cache->set($cacheIdentifier, [
                         'headers' => $response->getHeaders(),
-                        'body' => (string)$response->getBody()->getContents()
+                        'body' => (string) $response->getBody()->getContents(),
                     ]);
 
                     // always rewind back to the start otherwise other middlewares may get empty "content"
@@ -80,19 +112,19 @@ class EndpointCacheMiddleware
         };
     }
 
-    private static function str_ends_with(string $haystack, string $needle)
+    private function getCacheKey(RequestInterface $request): string
     {
-        $haystackLength = strlen($haystack);
-        $needleLength = strlen($needle);
-        if (!$haystackLength || $needleLength > $haystackLength) {
-            return false;
-        }
-        $position = strrpos($haystack, $needle);
-        return $position !== false && $position === $haystackLength - $needleLength;
-    }
-
-    private static function getCacheKey(RequestInterface $request)
-    {
-        return hash('sha256', $request->getMethod() . $request->getUri() . json_encode($request->getHeaders()));
+        $headers = $request->getHeaders();
+        $headers = array_filter(
+            $headers,
+            fn (string $header) => in_array($header, $this->headerNames),
+            ARRAY_FILTER_USE_KEY
+        );
+        $block = [
+            'method' => $request->getMethod(),
+            'uri' => (string) $request->getUri(),
+            $headers,
+        ];
+        return hash('sha256', json_encode($block));
     }
 }

@@ -31,7 +31,8 @@ class EndpointCacheMiddlewareTest extends UnitTestCase
         parent::setUp();
 
         $this->cache = $this->createMock(VariableFrontend::class);
-        $this->middleware = new EndpointCacheMiddleware();
+        $this->middleware = EndpointCacheMiddleware::create()
+            ->withHttpMethods('GET');
         $this->inject($this->middleware, 'cache', $this->cache);
     }
 

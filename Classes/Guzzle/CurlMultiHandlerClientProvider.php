@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Netlogix\JsonApiOrg\Consumer\Guzzle;
@@ -17,7 +18,12 @@ final class CurlMultiHandlerClientProvider implements ClientProvider
         if ($this->client === null) {
             $handler = new CurlMultiHandler();
             $stack = HandlerStack::create($handler);
-            $stack->push(new EndpointCacheMiddleware(), 'endpoint-cache');
+            $stack->push(
+                middleware: EndpointCacheMiddleware::create()
+                    ->withHttpMethods('GET')
+                    ->withHeaderNames('Host', 'User-Agent'),
+                name: 'endpoint-cache'
+            );
             $this->client = new Client(['handler' => $stack]);
         }
         return $this->client;
