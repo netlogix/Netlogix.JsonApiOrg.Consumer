@@ -36,15 +36,24 @@ interface ConsumerBackendInterface
      */
     public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery): PromiseInterface;
 
+    public function findByTypeAndFilter(
+        string | Type $type,
+        array $filter = [],
+        array $include = [],
+        ?PageInterface $page = null,
+        ?SortInterface $sort = null
+    ): ResourceProxyIterator;
+
     /**
-     * @param string $type
-     * @param array $filter
-     * @param array $include
-     * @param PageInterface $page
-     * @param SortInterface $sort
-     * @return ResourceProxyIterator
+     * @return PromiseInterface<ResourceProxyIterator>
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null);
+    public function requestByTypeAndFilter(
+        string | Type $type,
+        array $filter = [],
+        array $include = [],
+        ?PageInterface $page = null,
+        ?SortInterface $sort = null
+    ): PromiseInterface;
 
     /**
      * Fetch data from the given URI synchronously.

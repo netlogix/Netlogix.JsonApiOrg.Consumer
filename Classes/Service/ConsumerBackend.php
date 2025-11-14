@@ -139,12 +139,34 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @throws \Neos\Cache\Exception
      */
     public function findByTypeAndFilter(
-        $type,
-        $filter = [],
-        $include = [],
-        PageInterface $page = null,
-        SortInterface $sort = null
-    ) {
+        string|Type $type,
+        array $filter = [],
+        array $include = [],
+        ?PageInterface $page = null,
+        ?SortInterface $sort = null
+    ): ResourceProxyIterator {
+        return $this
+            ->requestByTypeAndFilter(
+                type: $type,
+                filter: $filter,
+                include: $include,
+                page: $page,
+                sort: $sort
+            )
+            ->wait();
+    }
+
+    /**
+     * @throws InvalidDataException
+     * @throws \Neos\Cache\Exception
+     */
+    public function requestByTypeAndFilter(
+        string|Type $type,
+        array $filter = [],
+        array $include = [],
+        ?PageInterface $page = null,
+        ?SortInterface $sort = null
+    ): PromiseInterface {
         $queryUri = $this->getQueryUriForFindByTypeAndFilter(
             type: $type,
             filter: $filter,
