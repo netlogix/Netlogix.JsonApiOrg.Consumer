@@ -88,7 +88,10 @@ class Type
 
     public function getUri(string $endpointName = self::DEFAULT_ENDPOINT_NAME): ?UriInterface
     {
-        return $this->uris[$endpointName] ?? null;
+        return $this->uris[$endpointName]
+            ?? $this->uris[self::DEFAULT_ENDPOINT_NAME]
+            ?? current($this->uris)
+            ?: null;
     }
 
     /**
@@ -100,20 +103,22 @@ class Type
         foreach ($this->uris as $uri) {
             $uris[(string) $uri] = $uri;
         }
-        $types = array_map(function (UriInterface $uri) {
-            $type = clone $this;
-            $type->uris = [self::DEFAULT_ENDPOINT_NAME => $uri];
-            return $type;
-        }, $uris);
-        return array_values($types);
+        $variants = array_map(
+            fn (UriInterface $uri) => (clone $this)->setUri($uri),
+            $uris
+        );
+        return array_values($variants);
+    }
+
+    public function addUri(UriInterface $uri, string $endpointName = self::DEFAULT_ENDPOINT_NAME): static
+    {
+        $this->uris[$endpointName] = $uri;
+        return $this;
     }
 
     public function setUri(UriInterface $uri, string $endpointName = self::DEFAULT_ENDPOINT_NAME): static
     {
-        $this->uris[$endpointName] = $uri;
-        if (count($this->uris) === 1) {
-            $this->uris[self::DEFAULT_ENDPOINT_NAME] = $uri;
-        }
+        $this->uris = [$endpointName => $uri];
         return $this;
     }
 

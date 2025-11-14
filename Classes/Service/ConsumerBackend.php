@@ -147,7 +147,7 @@ class ConsumerBackend implements ConsumerBackendInterface
                     if (!$type) {
                         continue;
                     }
-                    $type->setUri(new Uri($link['href']), $endpointDiscovery);
+                    $type->addUri(new Uri($link['href']), $endpointDiscovery);
                     $types[] = $type;
                 }
                 return $types;
