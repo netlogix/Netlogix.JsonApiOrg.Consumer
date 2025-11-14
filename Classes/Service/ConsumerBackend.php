@@ -77,6 +77,13 @@ class ConsumerBackend implements ConsumerBackendInterface
     protected $resources = [];
 
     /**
+     * Map of typeName to sparse fieldset
+     *
+     * @var array<string, string[]>
+     */
+    protected array $sparseFields = [];
+
+    /**
      * @param Type $type
      */
     public function addType(Type $type)
@@ -185,6 +192,7 @@ class ConsumerBackend implements ConsumerBackendInterface
         ?SortInterface $sort = null
     ): Uri {
         $type = $this->normalizeType($type);
+        $typeName = $type->getTypeName();
 
         $arguments = UriHelper::parseQueryIntoArguments($type->getUri());
         foreach ($filter as $key => $value) {
@@ -200,6 +208,11 @@ class ConsumerBackend implements ConsumerBackendInterface
         }
         if ($sort !== null) {
             $arguments['sort'] = $sort->__toString();
+        }
+
+        if (array_key_exists($typeName, $this->sparseFields)) {
+            $fields = $this->sparseFields[$typeName];
+            $arguments[sprintf('fields[%s]', $typeName)] = join(',', $fields);
         }
 
         $queryUri = UriHelper::uriWithArguments($type->getUri(), $arguments);
@@ -265,6 +278,24 @@ class ConsumerBackend implements ConsumerBackendInterface
     public function fetchByTypeAndId($type, $id)
     {
         return $this->getResourceProxyFromCache($type, $id);
+    }
+
+    /**
+     * @template T
+     * @param array<string, string[]> $fields
+     * @param (callable(self): T) $do
+     * @return T
+     */
+    public function withSparseFields(array $fields, callable $do): mixed
+    {
+        try {
+            $previousFields = $this->sparseFields;
+            $this->sparseFields = array_merge($previousFields, $fields);
+
+            return $do($this);
+        } finally {
+            $this->sparseFields = $previousFields;
+        }
     }
 
     /**

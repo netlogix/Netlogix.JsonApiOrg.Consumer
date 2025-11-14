@@ -77,4 +77,13 @@ interface ConsumerBackendInterface
      * @return ResourceProxy
      */
     public function fetchByTypeAndId($type, $id);
+
+    /**
+     * @template T
+     * @param array<string, string[]> $fields
+     * @param (callable(self): T) $do
+     * @return T
+     */
+    public function withSparseFields(array $fields, callable $do): mixed;
+
 }
