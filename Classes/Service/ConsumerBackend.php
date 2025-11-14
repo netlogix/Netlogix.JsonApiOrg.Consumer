@@ -16,6 +16,7 @@ use GuzzleHttp\Exception\ServerException as GuzzleServerException;
 use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Uri;
+use InvalidArgumentException;
 use Neos\Cache\Exception\InvalidDataException;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
@@ -28,10 +29,13 @@ use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
 use Netlogix\JsonApiOrg\Consumer\Exception\Client\ClientException;
 use Netlogix\JsonApiOrg\Consumer\Exception\Server\ServerException;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
+use Netlogix\JsonApiOrg\Schema\Resource;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Throwable;
 
+use function is_null;
+use function is_string;
 use function strtolower;
 
 /**
@@ -46,8 +50,8 @@ class ConsumerBackend implements ConsumerBackendInterface
      */
     protected $headers = [
         '%^http(s?)://%i' => [
-            'User-Agent' => 'Netlogix.JsonApiOrg.Consumer'
-        ]
+            'User-Agent' => 'Netlogix.JsonApiOrg.Consumer',
+        ],
     ];
 
     /**
@@ -98,41 +102,39 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @throws InvalidDataException
      * @throws \Neos\Cache\Exception
      */
-    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery)
+    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery): PromiseInterface
     {
-        $result = $this
+        return $this
             ->requestJson($endpointDiscovery)
-            ->wait();
-        foreach ($result['links'] as $link) {
-            if (!is_array($link) || !isset($link['meta'])) {
-                continue;
-            }
-            if (!isset($link['meta']['type']) || $link['meta']['type'] !== 'resourceUri') {
-                continue;
-            }
-            if (!isset($link['meta']['resourceType'])) {
-                continue;
-            }
-            if (!isset($link['href'])) {
-                continue;
-            }
+            ->then(function (array $result) use ($endpointDiscovery): array {
+                $types = [];
+                foreach ($result['links'] as $link) {
+                    if (!is_array($link) || !isset($link['meta'])) {
+                        continue;
+                    }
+                    if (!isset($link['meta']['type']) || $link['meta']['type'] !== 'resourceUri') {
+                        continue;
+                    }
+                    if (!isset($link['meta']['resourceType'])) {
+                        continue;
+                    }
+                    if (!isset($link['href'])) {
+                        continue;
+                    }
 
-            $typeName = $link['meta']['resourceType'];
-            $type = $this->getType($typeName);
-            if (!$type) {
-                continue;
-            }
-            $type->setUri(new Uri($link['href']));
-        }
+                    $typeName = $link['meta']['resourceType'];
+                    $type = $this->getType($typeName);
+                    if (!$type) {
+                        continue;
+                    }
+                    $type->setUri(new Uri($link['href']), $endpointDiscovery);
+                    $types[] = $type;
+                }
+                return $types;
+            });
     }
 
     /**
-     * @param string $type
-     * @param array $filter
-     * @param array $include
-     * @param PageInterface|null $page
-     * @param SortInterface|null $sort
-     * @return ResourceProxyIterator
      * @throws InvalidDataException
      * @throws \Neos\Cache\Exception
      */
@@ -144,31 +146,23 @@ class ConsumerBackend implements ConsumerBackendInterface
         SortInterface $sort = null
     ) {
         $queryUri = $this->getQueryUriForFindByTypeAndFilter(
-            $type,
-            $filter,
-            $include,
-            $page,
-            $sort
+            type: $type,
+            filter: $filter,
+            include: $include,
+            page: $page,
+            sort: $sort
         );
-        return $this->fetchFromUri($queryUri);
+        return $this->requestFromUri($queryUri);
     }
 
-    /**
-     * @param string $type
-     * @param array $filter
-     * @param array $include
-     * @param PageInterface|null $page
-     * @param SortInterface|null $sort
-     * @return Uri
-     */
     public function getQueryUriForFindByTypeAndFilter(
-        $type,
-        $filter = [],
-        $include = [],
-        PageInterface $page = null,
-        SortInterface $sort = null
+        string|Type $type,
+        array $filter = [],
+        array $include = [],
+        ?PageInterface $page = null,
+        ?SortInterface $sort = null
     ): Uri {
-        $type = $this->getType($type);
+        $type = $this->normalizeType($type);
 
         $arguments = UriHelper::parseQueryIntoArguments($type->getUri());
         foreach ($filter as $key => $value) {
@@ -225,14 +219,14 @@ class ConsumerBackend implements ConsumerBackendInterface
         if (!$resourceProxy->hasResults()) {
             $result = $this
                 ->requestJson($queryUri)
-                ->then(function(array $jsonResult) use ($resourceProxy) {
+                ->then(function (array $jsonResult) use ($resourceProxy) {
                     return $resourceProxy->withJsonResult($jsonResult);
                 });
         } else {
             $result = new FulfilledPromise($resourceProxy);
         }
 
-        return $result->then(function(ResourceProxyIterator $resourceProxy) {
+        return $result->then(function (ResourceProxyIterator $resourceProxy) {
             $convertResourceDefinitionToResourceProxy = function (array $resourceDefinition): ?ResourceProxy {
                 return $this->convertResourceDefinitionToResourceProxy($resourceDefinition);
             };
@@ -254,58 +248,45 @@ class ConsumerBackend implements ConsumerBackendInterface
     /**
      * @param Uri $uri
      * @return PromiseInterface<array>
-     * @throws InvalidDataException
-     * @throws \Neos\Cache\Exception
      * @return PromiseInterface<array>
+     * @throws \Neos\Cache\Exception
+     * @throws InvalidDataException
      */
     protected function requestJson(Uri $uri): PromiseInterface
     {
-        $uriString = (string)$uri;
+        $headers = $this->getRequestHeaders($uri);
 
-        $headers = $this->getRequestHeaders($uriString);
+        $cacheIdentifier = $this->getCacheIdentifierForUri($uri);
 
-        $headersForCacheIdentifier = [];
-        $storeResponse = true;
-
-        foreach ($headers as $key => $value) {
-            $key = strtolower($key);
-            if ($key === 'cache-control' && strtolower($value) === 'no-store') {
-                $storeResponse = false;
-            }
-            $headersForCacheIdentifier[] = sprintf('%s: %s', $key, $value);
-        }
-
-        $cacheIdentifier = md5(serialize($headersForCacheIdentifier) . '|' . $uriString);
-
-        if ($this->requestsCache->has($cacheIdentifier)) {
+        if ($cacheIdentifier && $this->requestsCache->has($cacheIdentifier)) {
             $response = new FulfilledPromise(
                 $this->requestsCache->get($cacheIdentifier)
             );
         } else {
             $response = $this
                 ->fetch($uri, $headers)
-                ->then(function(string $result) use ($cacheIdentifier, $storeResponse) {
-                    if ($storeResponse) {
+                ->then(function (string $result) use ($cacheIdentifier) {
+                    if ($cacheIdentifier) {
                         $this->requestsCache->set($cacheIdentifier, $result);
                     }
                     return $result;
                 });
         }
 
-        return $response->then(function(string $result) {
+        return $response->then(function (string $result) {
             return json_decode($result, true);
         });
     }
 
-    /**
-     * @param string $uriString
-     * @return array
-     */
-    protected function getRequestHeaders(string $uriString): array
+    protected function getRequestHeaders(string | UriInterface $uri): array
     {
+        if ($uri instanceof UriInterface) {
+            $uri = $uri->__toString();
+        }
+
         $headers = [];
         foreach ($this->headers as $uriPattern => $headersForUriPattern) {
-            if (!preg_match($uriPattern, $uriString)) {
+            if (!preg_match($uriPattern, $uri)) {
                 continue;
             }
             foreach ($headersForUriPattern as $key => $value) {
@@ -326,7 +307,7 @@ class ConsumerBackend implements ConsumerBackendInterface
         return $this
             ->createClient()
             ->getAsync($uri, [
-                'headers' => $headers
+                'headers' => $headers,
             ])
             ->then(function (ResponseInterface $response) {
                 return $response->getBody()->getContents();
@@ -353,7 +334,7 @@ class ConsumerBackend implements ConsumerBackendInterface
                 return null;
             }
             $resource = $type->createEmptyResource();
-            $cacheIdentifier = $this->calculateCacheIdentifier($typeName, $id);
+            $cacheIdentifier = $this->calculateCacheIdentifierForTypeAndId($typeName, $id);
             $this->resources[$cacheIdentifier] = $resource;
         }
         $resource->setPayload($resourceDefinition);
@@ -367,7 +348,7 @@ class ConsumerBackend implements ConsumerBackendInterface
      */
     protected function getResourceProxyFromCache($type, $id)
     {
-        $cacheIdentifier = $this->calculateCacheIdentifier($type, $id);
+        $cacheIdentifier = $this->calculateCacheIdentifierForTypeAndId($type, $id);
         if (array_key_exists($cacheIdentifier, $this->resources)) {
             return $this->resources[$cacheIdentifier];
         }
@@ -380,9 +361,44 @@ class ConsumerBackend implements ConsumerBackendInterface
      * @param string $id
      * @return string
      */
-    protected function calculateCacheIdentifier($type, $id)
+    protected function calculateCacheIdentifierForTypeAndId($type, $id)
     {
         return $type . "\n" . $id;
+    }
+
+
+
+    protected function getCacheIdentifierForUri(Uri $uri): string | false
+    {
+        $uriString = (string) $uri;
+
+        $headers = $this->getRequestHeaders($uriString);
+
+        $headersForCacheIdentifier = [];
+        foreach ($headers as $key => $value) {
+            $key = strtolower($key);
+            if ($key === 'cache-control' && strtolower($value) === 'no-store') {
+                return false;
+            }
+            $headersForCacheIdentifier[] = sprintf('%s: %s', $key, $value);
+        }
+        return md5(serialize($headersForCacheIdentifier) . '|' . $uriString);
+    }
+
+    protected function normalizeType(string|Type $type): Type
+    {
+        if ($type instanceof Type) {
+            return $type;
+        }
+        if (is_string($type)) {
+            $typeName = $type;
+            $type = $this->getType(typeName: $typeName);
+        }
+
+        if (is_null($type)) {
+            throw new InvalidArgumentException('No json api type found for "' . $typeName . '"', 1763057463);
+        }
+        return $type;
     }
 
     public function createClient(): Client

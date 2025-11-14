@@ -14,95 +14,107 @@ use Neos\Flow\Annotations as Flow;
 use Neos\Flow\ObjectManagement\ObjectManagerInterface;
 use Psr\Http\Message\UriInterface;
 
+use function array_filter;
+use function array_map;
+use function array_values;
+use function current;
+
+use const ARRAY_FILTER_USE_KEY;
+
 class Type
 {
     /**
      * That's the return value for undefined properties.
      */
-    const PROPERTY_UNDEFINED = null;
+    public const null PROPERTY_UNDEFINED = null;
 
     /**
      * Those properties are "attributes" as of jsonapi.org
      */
-    const PROPERTY_ATTRIBUTE = 'attribute';
+    public const string PROPERTY_ATTRIBUTE = 'attribute';
 
     /**
      * Those properties are a relationship to a single Resource
      */
-    const PROPERTY_SINGLE_RELATIONSHIP = 'single';
+    public const string PROPERTY_SINGLE_RELATIONSHIP = 'single';
 
     /**
      * Those properties are a relationship to a collection of other resources
      */
-    const PROPERTY_COLLECTION_RELATIONSHIP = 'collection';
+    public const string PROPERTY_COLLECTION_RELATIONSHIP = 'collection';
 
     /**
      * That's not a real property but maybe a getter in the corresponding model.
      */
-    const PROPERTY_CUSTOM = 'custom';
+    public const string PROPERTY_CUSTOM = 'custom';
+
+    public const string DEFAULT_ENDPOINT_NAME = 'default';
 
     /**
-     * @var string
+     * @var UriInterface[]
      */
-    protected $typeName = '';
+    protected array $uris = [];
 
-    /**
-     * @var string
-     */
-    protected $resourceClassName = '';
+    #[Flow\Inject]
+    protected ObjectManagerInterface $objectManager;
 
-    /**
-     * @var array
-     */
-    protected $properties = [];
-
-    /**
-     * @var UriInterface
-     */
-    protected $uri;
-
-    /**
-     * @var array
-     */
-    protected $defaultIncludes = [];
-
-    /**
-     * @var ObjectManagerInterface
-     * @Flow\Inject
-     */
-    protected $objectgManager;
-
-    /**
-     * @param string $typeName
-     * @param string $resourceClassName
-     * @param array $properties
-     * @param UriInterface $uri
-     * @param array $defaultIncludes
-     */
-    public function __construct(
-        $typeName,
-        $resourceClassName = ResourceProxy::class,
-        array $properties = [],
-        UriInterface $uri = null,
-        array $defaultIncludes = []
+    protected function __construct(
+        protected string $typeName,
+        /**
+         * @var class-string<ResourceProxy>
+         */
+        protected string $resourceClassName,
+        protected array $properties,
+        protected array $defaultIncludes,
     ) {
-        $this->typeName = (string)$typeName;
-        $this->resourceClassName = (string)$resourceClassName;
-        $this->properties = $properties;
-        if ($uri) {
-            $this->setUri($uri);
+    }
+
+    public static function create(
+        string $typeName,
+        /**
+         * @var class-string<ResourceProxy>
+         */
+        string $resourceClassName = ResourceProxy::class,
+        array $properties = [],
+        array $defaultIncludes = []
+    ): static {
+        return new static(
+            $typeName,
+            $resourceClassName,
+            $properties,
+            $defaultIncludes
+        );
+    }
+
+    public function getUri(string $endpointName = self::DEFAULT_ENDPOINT_NAME): ?UriInterface
+    {
+        return $this->uris[$endpointName] ?? null;
+    }
+
+    /**
+     * @return Type[]
+     */
+    public function getUriVariants(): array
+    {
+        $uris = [];
+        foreach ($this->uris as $uri) {
+            $uris[(string) $uri] = $uri;
         }
-        $this->defaultIncludes = $defaultIncludes;
+        $types = array_map(function (UriInterface $uri) {
+            $type = clone $this;
+            $type->uris = [self::DEFAULT_ENDPOINT_NAME => $uri];
+            return $type;
+        }, $uris);
+        return array_values($types);
     }
 
-    public function getUri(): ?UriInterface
+    public function setUri(UriInterface $uri, string $endpointName = self::DEFAULT_ENDPOINT_NAME): static
     {
-        return $this->uri;
-    }
-
-    public function setUri(UriInterface $uri): void
-    {
-        $this->uri = $uri;
+        $this->uris[$endpointName] = $uri;
+        if (count($this->uris) === 1) {
+            $this->uris[self::DEFAULT_ENDPOINT_NAME] = $uri;
+        }
+        return $this;
     }
 
     /**
@@ -126,19 +138,21 @@ class Type
      */
     public function createEmptyResource(): ResourceProxy
     {
-        return $this->objectgManager->get($this->resourceClassName, $this);
+        $result = $this->objectManager->get($this->resourceClassName, $this);
+        assert($result instanceof ResourceProxy);
+        return $result;
     }
 
     /**
-     * @return array
+     * @return string[]
      */
-    public function getDefaultIncludes()
+    public function getDefaultIncludes(): array
     {
         return $this->defaultIncludes;
     }
 
     /**
-     * @return string|null
+     * @return self::PROPERTY_UNDEFINED|self::PROPERTY_ATTRIBUTE|self::PROPERTY_SINGLE_RELATIONSHIP|self::PROPERTY_COLLECTION_RELATIONSHIP|self::PROPERTY_CUSTOM
      */
     public function getPropertyDefinition($propertyName)
     {

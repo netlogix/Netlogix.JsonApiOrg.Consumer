@@ -35,7 +35,7 @@ class FunctionalTestCase extends BaseTestCase
             'collection' => JsonApi\Type::PROPERTY_COLLECTION_RELATIONSHIP,
         ];
 
-        $this->type = new class ($typeName, $className, $properties) extends JsonApi\Type {
+        $this->type = new class ($typeName, $className, $properties, []) extends JsonApi\Type {
             public $__consumerBackend;
 
             public function createEmptyResource(): JsonApi\ResourceProxy

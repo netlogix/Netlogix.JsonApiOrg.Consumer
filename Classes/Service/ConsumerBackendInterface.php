@@ -34,7 +34,7 @@ interface ConsumerBackendInterface
     /**
      * @param UriInterface $endpointDiscovery
      */
-    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery);
+    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery): PromiseInterface;
 
     /**
      * @param string $type
@@ -50,16 +50,14 @@ interface ConsumerBackendInterface
      * Fetch data from the given URI synchronously.
      * The resulting ResourceProxyIterator is fully populated.
      *
-     * @param UriInterface $queryUri
      * @return ResourceProxyIterator
      */
-    public function fetchFromUri(UriInterface $queryUri);
+    public function fetchFromUri(UriInterface $queryUri): ResourceProxyIterator;
 
     /**
      * Fetch data from the given URI asynchronously.
      * The request will be executed immediately.
      *
-     * @param UriInterface $queryUri
      * @return PromiseInterface<ResourceProxyIterator>
      */
     public function requestFromUri(UriInterface $queryUri): PromiseInterface;
