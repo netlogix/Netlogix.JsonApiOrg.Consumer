@@ -86,4 +86,11 @@ interface ConsumerBackendInterface
      */
     public function withSparseFields(array $fields, callable $do): mixed;
 
+    /**
+     * @template T
+     * @param array<string, string> $additionalHeaders
+     * @param (callable(self): T) $do
+     * @return T
+     */
+    public function withHeaders(array $additionalHeaders, callable $do): mixed;
 }

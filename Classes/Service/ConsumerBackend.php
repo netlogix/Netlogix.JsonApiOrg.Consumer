@@ -32,6 +32,7 @@ use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
 use Netlogix\JsonApiOrg\Schema\Resource;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
+use Stringable;
 use Throwable;
 
 use function is_null;
@@ -45,7 +46,10 @@ class ConsumerBackend implements ConsumerBackendInterface
 {
 
     /**
-     * @var array<string>
+     * A map of arrays where the keys of the first level is meant as regular expression
+     * matching the request URI.
+     *
+     * @var array<string, array<string, string>>
      * @Flow\InjectConfiguration(package = "Netlogix.JsonApiOrg.Consumer", path = "headers")
      */
     protected $headers = [
@@ -53,6 +57,15 @@ class ConsumerBackend implements ConsumerBackendInterface
             'User-Agent' => 'Netlogix.JsonApiOrg.Consumer',
         ],
     ];
+
+    /**
+     * This array does not map to the request uri in any way. It's just headers being
+     * applied to every request.
+     *
+     * @var array<string, (string|Stringable)>
+     * @see self::withHeaders()
+     */
+    protected $additionalHeaders = [];
 
     /**
      * @var StringFrontend
@@ -299,6 +312,24 @@ class ConsumerBackend implements ConsumerBackendInterface
     }
 
     /**
+     * @template T
+     * @param array<string, (string|Stringable)> $additionalHeaders
+     * @param (callable(self): T) $do
+     * @return T
+     */
+    public function withHeaders(array $additionalHeaders, callable $do): mixed
+    {
+        try {
+            $previousHeaders = $this->additionalHeaders;
+            $this->additionalHeaders = array_merge($previousHeaders, $additionalHeaders);
+
+            return $do($this);
+        } finally {
+            $this->additionalHeaders = $previousHeaders;
+        }
+    }
+
+    /**
      * @param Uri $uri
      * @return PromiseInterface<array>
      * @return PromiseInterface<array>
@@ -347,7 +378,9 @@ class ConsumerBackend implements ConsumerBackendInterface
             }
         }
 
-        return $headers;
+        $headers = array_merge($headers, $this->additionalHeaders);
+
+        return array_map(fn ($header) => (string) $header, $headers);
     }
 
     /**
