@@ -18,8 +18,9 @@ use function array_filter;
 use function array_map;
 use function array_values;
 use function current;
+use function is_callable;
 
-use const ARRAY_FILTER_USE_KEY;
+use const ARRAY_FILTER_USE_BOTH;
 
 class Type
 {
@@ -97,17 +98,16 @@ class Type
     /**
      * @return Type[]
      */
-    public function getUriVariants(): array
+    public function getUriVariants(?callable $filter = null): array
     {
         $uris = [];
         foreach ($this->uris as $uri) {
             $uris[(string) $uri] = $uri;
         }
-        $variants = array_map(
-            fn (UriInterface $uri) => (clone $this)->setUri($uri),
-            $uris
-        );
-        return array_values($variants);
+        $variants = array_map(fn (UriInterface $uri) => (clone $this)->setUri($uri), $uris);
+        $variants = is_callable($filter) ? array_filter($variants, $filter, ARRAY_FILTER_USE_BOTH) : $variants;
+        $variants = array_values($variants);
+        return $variants;
     }
 
     public function addUri(UriInterface $uri, string $endpointName = self::DEFAULT_ENDPOINT_NAME): static
