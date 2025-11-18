@@ -13,11 +13,12 @@ final class CurlMultiHandlerClientProvider implements ClientProvider
 {
     public ?Client $client = null;
 
+    protected ?CurlMultiHandler $handler;
+
     public function createClient(): Client
     {
         if ($this->client === null) {
-            $handler = new CurlMultiHandler();
-            $stack = HandlerStack::create($handler);
+            $stack = HandlerStack::create($this->getHandler());
             $stack->push(
                 middleware: EndpointCacheMiddleware::create()
                     ->withHttpMethods('GET')
@@ -27,6 +28,11 @@ final class CurlMultiHandlerClientProvider implements ClientProvider
             $this->client = new Client(['handler' => $stack]);
         }
         return $this->client;
+    }
+
+    public function getHandler(): CurlMultiHandler
+    {
+        return $this->handler = $this->handler ?? new CurlMultiHandler();
     }
 
 }
