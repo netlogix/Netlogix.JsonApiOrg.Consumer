@@ -62,7 +62,8 @@ class Type
     protected function __construct(
         protected string $typeName,
         /**
-         * @var class-string<ResourceProxy>
+         * @phpstan-var class-string<ResourceProxy>
+         * @var string
          */
         protected string $resourceClassName,
         protected array $properties,
@@ -72,9 +73,6 @@ class Type
 
     public static function create(
         string $typeName,
-        /**
-         * @var class-string<ResourceProxy>
-         */
         string $resourceClassName = ResourceProxy::class,
         array $properties = [],
         array $defaultIncludes = []
