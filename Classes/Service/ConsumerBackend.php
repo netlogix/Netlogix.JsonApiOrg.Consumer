@@ -208,6 +208,10 @@ class ConsumerBackend implements ConsumerBackendInterface
         $type = $this->normalizeType($type);
         $typeName = $type->getTypeName();
 
+        if (is_null($type->getUri())) {
+            throw new \InvalidArgumentException('No URI given for type "' . $type->getTypeName() . '".', 1767877186);
+        }
+
         $arguments = UriHelper::parseQueryIntoArguments($type->getUri());
         foreach ($filter as $key => $value) {
             $arguments['filter'][$key] = $value;
