@@ -52,7 +52,7 @@ class ResourceProxyIterator implements IteratorAggregate, Countable
         $this->uri = $uri;
     }
 
-    public static function fromUri(UriInterface $uri): self
+    public static function fromUri(UriInterface $uri): static
     {
         return new static((string)$uri);
     }
@@ -72,7 +72,7 @@ class ResourceProxyIterator implements IteratorAggregate, Countable
         $this->throwableStorage = $throwableStorage;
     }
 
-    public function initialize(callable $convertResourceDefinitionToResourceProxy): self
+    public function initialize(callable $convertResourceDefinitionToResourceProxy): static
     {
         $result = $this->jsonResult ?? [];
 
@@ -82,7 +82,7 @@ class ResourceProxyIterator implements IteratorAggregate, Countable
         return $this;
     }
 
-    public function withJsonResult(array $jsonResult): self
+    public function withJsonResult(array $jsonResult): static
     {
         $jsonResult['data'] = $jsonResult['data'] ?? [];
         if (isset($jsonResult['data']['type']) && isset($jsonResult['data']['id'])) {
@@ -134,7 +134,7 @@ class ResourceProxyIterator implements IteratorAggregate, Countable
         return is_array($this->jsonResult);
     }
 
-    public function saveToCache(int $lifetime, string ...$tags): self
+    public function saveToCache(int $lifetime, string ...$tags): static
     {
         $identifier = sha1($this->uri);
         sort($tags);
@@ -159,7 +159,7 @@ class ResourceProxyIterator implements IteratorAggregate, Countable
         return $this;
     }
 
-    public function loadFromCache(): self
+    public function loadFromCache(): static
     {
         $identifier = sha1($this->uri);
         $cacheData = null;
@@ -179,7 +179,7 @@ class ResourceProxyIterator implements IteratorAggregate, Countable
         return $this;
     }
 
-    protected function setRawJson(array $jsonResult): self
+    protected function setRawJson(array $jsonResult): static
     {
         $this->jsonResult = $jsonResult;
         $this->eTag = '';

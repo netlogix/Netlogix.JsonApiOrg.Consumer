@@ -34,32 +34,39 @@ interface ConsumerBackendInterface
     /**
      * @param UriInterface $endpointDiscovery
      */
-    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery);
+    public function registerEndpointsByEndpointDiscovery(UriInterface $endpointDiscovery): PromiseInterface;
+
+    public function findByTypeAndFilter(
+        string | Type $type,
+        array $filter = [],
+        array $include = [],
+        ?PageInterface $page = null,
+        ?SortInterface $sort = null
+    ): ResourceProxyIterator;
 
     /**
-     * @param string $type
-     * @param array $filter
-     * @param array $include
-     * @param PageInterface $page
-     * @param SortInterface $sort
-     * @return ResourceProxyIterator
+     * @return PromiseInterface<ResourceProxyIterator>
      */
-    public function findByTypeAndFilter($type, $filter = [], $include = [], PageInterface $page = null, SortInterface $sort = null);
+    public function requestByTypeAndFilter(
+        string | Type $type,
+        array $filter = [],
+        array $include = [],
+        ?PageInterface $page = null,
+        ?SortInterface $sort = null
+    ): PromiseInterface;
 
     /**
      * Fetch data from the given URI synchronously.
      * The resulting ResourceProxyIterator is fully populated.
      *
-     * @param UriInterface $queryUri
      * @return ResourceProxyIterator
      */
-    public function fetchFromUri(UriInterface $queryUri);
+    public function fetchFromUri(UriInterface $queryUri): ResourceProxyIterator;
 
     /**
      * Fetch data from the given URI asynchronously.
      * The request will be executed immediately.
      *
-     * @param UriInterface $queryUri
      * @return PromiseInterface<ResourceProxyIterator>
      */
     public function requestFromUri(UriInterface $queryUri): PromiseInterface;
@@ -70,4 +77,20 @@ interface ConsumerBackendInterface
      * @return ResourceProxy
      */
     public function fetchByTypeAndId($type, $id);
+
+    /**
+     * @template T
+     * @param array<string, string[]> $fields
+     * @param (callable(self): T) $do
+     * @return T
+     */
+    public function withSparseFields(array $fields, callable $do): mixed;
+
+    /**
+     * @template T
+     * @param array<string, string> $additionalHeaders
+     * @param (callable(self): T) $do
+     * @return T
+     */
+    public function withHeaders(array $additionalHeaders, callable $do): mixed;
 }
