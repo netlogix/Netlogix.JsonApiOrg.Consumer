@@ -17,6 +17,7 @@ use GuzzleHttp\Promise\FulfilledPromise;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Uri;
 use InvalidArgumentException;
+use JsonException;
 use Neos\Cache\Exception\InvalidDataException;
 use Neos\Cache\Frontend\StringFrontend;
 use Neos\Flow\Annotations as Flow;
@@ -29,9 +30,9 @@ use Netlogix\JsonApiOrg\Consumer\Domain\Model\Type;
 use Netlogix\JsonApiOrg\Consumer\Exception\Client\ClientException;
 use Netlogix\JsonApiOrg\Consumer\Exception\Server\ServerException;
 use Netlogix\JsonApiOrg\Consumer\Guzzle\ClientProvider;
-use Netlogix\JsonApiOrg\Schema\Resource;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
+use RuntimeException;
 use Stringable;
 use Throwable;
 
@@ -207,6 +208,10 @@ class ConsumerBackend implements ConsumerBackendInterface
         $type = $this->normalizeType($type);
         $typeName = $type->getTypeName();
 
+        if (is_null($type->getUri())) {
+            throw new \InvalidArgumentException('No URI given for type "' . $type->getTypeName() . '".', 1767877186);
+        }
+
         $arguments = UriHelper::parseQueryIntoArguments($type->getUri());
         foreach ($filter as $key => $value) {
             $arguments['filter'][$key] = $value;
@@ -357,8 +362,16 @@ class ConsumerBackend implements ConsumerBackendInterface
                 });
         }
 
-        return $response->then(function (string $result) {
-            return json_decode($result, true);
+        return $response->then(function (string $result) use ($uri) {
+            try {
+                return json_decode(json: $result, associative: true, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException $e) {
+                throw new JsonException(
+                    $e->getMessage() . ' (while fetching ' . $uri . ')',
+                    1768312795,
+                    new RuntimeException($result, 1768311544)
+                );
+            }
         });
     }
 
