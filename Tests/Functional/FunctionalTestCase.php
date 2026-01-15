@@ -7,6 +7,7 @@ use GuzzleHttp\Psr7\Uri;
 use Neos\Flow\Tests\FunctionalTestCase as BaseTestCase;
 use Netlogix\JsonApiOrg\Consumer\Domain\Model as JsonApi;
 use Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackend;
+use Netlogix\JsonApiOrg\Consumer\Service\ConsumerBackendInterface;
 use Psr\Http\Message\UriInterface;
 
 class FunctionalTestCase extends BaseTestCase
@@ -40,6 +41,8 @@ class FunctionalTestCase extends BaseTestCase
         $this->consumerBackend = new ConsumerBackend();
         $this->consumerBackend->addType($this->type);
         $this->type->__consumerBackend = $this->consumerBackend;
+
+        $this->objectManager->setInstance(ConsumerBackendInterface::class, $this->consumerBackend);
     }
 
     public function asDataUri(array $fixture): UriInterface
